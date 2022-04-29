@@ -1,10 +1,175 @@
-## Resolve pre-requisites for initial commit
-**Task: Partner Developer**
+## Utility Meter Data Analytics on the AWS Cloud—Quick Start
 
-1) Plan you architecture - *Resolve Issue #1* Paste in Architecture Diagram into Issue #1 in repo 
-2) Add submodule to Repo - *Resolve Issue #2* Add submodules for QuickStart foundational asset (VPC/Bastion/EKS/RDS/etc) see list here 
-3) Setup local development env -  *Resolve Issue #3* Install taskcat  and test initial commit (Install video/docs here)
-4) Push initial commit commit (Follow automated feedback) Open issues as needed and iterate.
+For architectural details, step-by-step instructions, and customization options, see the [deployment guide](https://aws-quickstart.github.io/quickstart-aws-utility-meter-data-analytics-platform/).
 
-> Once Inital commit is merged removed this README.md and replace with Architecture Diagram from Issue #2
+To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo. 
 
+To submit code for this Quick Start, see the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).
+
+
+## Customized deployment
+
+With this instruction you will be able to deploy a customized built of the quickstart to your own account.
+
+### Clone submodules
+```bash
+cd submodules
+git submodule init 
+git submodule update
+cd -
+```
+
+### Package Lambda functions
+
+If functions were adjusted the functions have to be packaged first.
+To package the Lambda functions run the following script:
+
+```bash
+cd assets/functions/
+./create_deployment_packages.sh
+cd -
+```
+
+### Copy the MDA to your own S3 Bucket
+
+The updated content have to be copied to an S3 bucket from which it will be deployed.
+
+1. create an S3 Bucket in your account
+   `aws s3 mb s3://mda-data-<account_id>`
+2. use the `sync.sh` script to sync the needed artefacts to S3
+   `./sync.sh mda-data-<account_id>/artefacts`
+
+### Create configuration
+
+The configuration parameter can be provided via the Console, CLI or File.
+Here we use the provided script `apply-stack.sh` to deploy the Quick Start, the scripts expects the parameter json as an input value.
+
+Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. (will create a new VPC)
+
+```json
+
+[
+  {
+    "ParameterKey": "AdminUsername",
+    "ParameterValue": "meteradmin"
+  },
+  {
+    "ParameterKey": "AdminUserPassword",
+    "ParameterValue": "MeterAdmin2020!"
+  },
+  {
+    "ParameterKey": "ClusterName",
+    "ParameterValue": "redshift-meter-cluster"
+  },
+  {
+    "ParameterKey": "RemoteAccessCIDR",
+    "ParameterValue": "0.0.0.0/0"
+  },
+  {
+    "ParameterKey": "QSS3BucketName",
+    "ParameterValue": "mda-data-<account_id>"
+  },
+  {
+    "ParameterKey": "QSS3KeyPrefix",
+    "ParameterValue": "artefacts/"
+  },
+  {
+    "ParameterKey": "QSS3BucketRegion",
+    "ParameterValue": "us-east-1"
+  },
+  {
+    "ParameterKey": "AvailabilityZones",
+    "ParameterValue": "us-east-1a,us-east-1b"
+  },
+  {
+    "ParameterKey": "LandingzoneTransformer",
+    "ParameterValue": "london"
+  },
+  {
+    "ParameterKey": "DeploySpecialAdapters",
+    "ParameterValue": "mrasco"
+  },
+  {
+    "ParameterKey": "IncludeRedshift",
+    "ParameterValue": "True"
+  },
+  {
+    "ParameterKey": "IncludeEtlAggregationWfl",
+    "ParameterValue": "True"
+  }
+]
+
+```
+
+### Deploy MDA
+
+Call the apply script and provide the stack parameter file:
+`./apply-stack.sh stack-parameter.json`
+
+### Delete the MDA stack
+
+The delete script will empty all buckets before removing the stack
+`./delete-stack.sh`
+
+### Parameter template, if an existing VPC should be reused
+```json
+
+[
+    {
+    "ParameterKey": "AdminUsername",
+    "ParameterValue": "meteradmin"
+    },
+    {
+    "ParameterKey": "AdminUserPassword",
+    "ParameterValue": "MeterAdmin2020!"
+    },
+    {
+    "ParameterKey": "ClusterName",
+    "ParameterValue": "redshift-meter-cluster"
+    },
+    {
+    "ParameterKey": "Subnet1ID",
+    "ParameterValue": "<subnet_id_1>"
+    },
+    {
+    "ParameterKey": "Subnet2ID",
+    "ParameterValue": "<subnet_id_2>"
+    },
+    {
+    "ParameterKey": "VPCID",
+    "ParameterValue": "<vpc_id>"
+    },
+    {
+    "ParameterKey": "RemoteAccessCIDR",
+    "ParameterValue": "0.0.0.0/0"
+    },
+    {
+    "ParameterKey": "QSS3BucketName",
+    "ParameterValue": "mda-data-<account_id>"
+    },
+    {
+    "ParameterKey": "QSS3KeyPrefix",
+    "ParameterValue": "artefacts/"
+    },
+    {
+    "ParameterKey": "QSS3BucketRegion",
+    "ParameterValue": "us-east-1"
+    },
+    {
+    "ParameterKey": "VPCRouteTableId",
+    "ParameterValue": "<rtb_id>"
+    },
+    {
+    "ParameterKey": "AvailabilityZone",
+    "ParameterValue": "us-east-1a"
+    },
+    {
+    "ParameterKey": "LandingzoneTransformer",
+    "ParameterValue": "london"
+    },
+    {
+    "ParameterKey": "IncludeRedshift",
+    "ParameterValue": "True"
+    }
+]
+```

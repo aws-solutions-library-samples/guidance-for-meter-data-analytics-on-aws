@@ -1,0 +1,29 @@
+Deploying this Quick Start for a new virtual private cloud (VPC) with
+default parameters builds the following {partner-product-name} environment in the
+AWS Cloud.
+
+:xrefstyle: short
+[#architecture1]
+.Quick Start architecture for {partner-product-name} on AWS
+image::../images/architecture_diagram.png[Architecture,width=100%,height=100%]
+
+As shown in <<architecture1>>, the Quick Start sets up the following:
+
+* A VPC configured with a private subnet, according to AWS best practices, to provide you with your own virtual network on AWS.*
+* In the private subnet, an Amazon Redshift cluster that stores business data for analysis, visualization, and dashboards.
+* An extract, transform, load (ETL) pipeline:
+** S3 buckets to store data from an MDM or similar system. Raw meter data, clean data, and partitioned business data are stored in separate S3 buckets.
+** An AWS Glue workflow:
+*** Crawlers, jobs, and triggers to crawl, transform, and convert incoming raw meter data into clean data in the desired format and partitioned business data.
+*** Data Catalog to store metadata and source information about the meter data.
+* An ML pipeline:
+** Two AWS Step Functions workflows:
+*** Batch processing, which uses the partitioned business data and the data from the model as a basis for forecasting. 
+*** Model training, which uses the partitioned business data to build an ML model.
+** Amazon S3 for storing the processed data.
+** Amazon SageMaker for real-time forecasting of energy usage.
+** A Jupyter notebook with sample code to perform data science and data visualization.
+* AWS Lambda to query the partitioned business data through Amazon Athena or invoke SageMaker to provide API query results.
+* Amazon API Gateway to deliver API query results for energy usage, anomalies, and meter outages.
+
+[.small]#*The template that deploys the Quick Start into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
