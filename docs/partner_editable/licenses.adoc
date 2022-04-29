@@ -1,0 +1,3 @@
+// Include details about the license and how they can sign up. If no license is required, clarify that. 
+
+This Quick Start doesn't require any software license or AWS Marketplace subscription.

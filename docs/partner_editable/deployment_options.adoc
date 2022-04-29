@@ -1,0 +1,10 @@
+// There are generally two deployment options. If additional are required, add them here
+
+This Quick Start creates a serverless architecture in your AWS account. As part of the deployment, it creates an Amazon Redshift cluster, which is created in a private subnet within a VPC.
+
+For deployment of the Amazon Redshift cluster, this Quick Start provides two deployment options:
+
+* *Deploy {partner-product-name} into a new VPC*. This option builds a new AWS environment consisting of the VPC, the subnet, and other infrastructure components. It then deploys an Amazon Redshift cluster into the new VPC.
+* *Deploy {partner-product-name} into an existing VPC*. This option provisions an Amazon Redshift cluster in your existing AWS infrastructure.
+
+The Quick Start provides separate templates for these options. It also lets you configure Classless Inter-Domain Routing (CIDR) blocks, the number of digital processing units (DPUs) for AWS Glue jobs, and the source S3 bucket, as discussed later in this guide.
