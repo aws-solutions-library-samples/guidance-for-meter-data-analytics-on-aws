@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+
+Resources:
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+  RawRecordsStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: RawRecordsStream
+      RetentionPeriodHours: 168
+      StreamModeDetails:
+        StreamMode: ON_DEMAND
+
+  RawEventsFirehose:
+    DependsOn: DeliveryPolicy
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: RawRecordsDeliveryStream
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt RawRecordsStream.Arn
+        RoleARN: !GetAtt DeliveryRole.Arn
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !GetAtt RawDataBucket.Arn
+        BufferingHints:
+          IntervalInSeconds: '60'
+          SizeInMBs: '100'
+        CompressionFormat: UNCOMPRESSED
+        ErrorOutputPrefix: "errors/json/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}"
+        Prefix: "measures/json/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/hour=!{partitionKeyFromQuery:hour}/"
+        DynamicPartitioningConfiguration:
+          Enabled: true
+          RetryOptions:
+            DurationInSeconds: 300
+        RoleARN: !GetAtt DeliveryRole.Arn
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  #.reading_date_time with type string and format "yyyy-MM-dd HH:mm:ss.SSS"
+                  ParameterValue: "{year:.reading_date_time[:4],month:.reading_date_time[5:7],day:.reading_date_time[8:10],hour:.reading_date_time[11:13]}"
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
+            - Type: AppendDelimiterToRecord
+              Parameters:
+                - ParameterName: Delimiter
+                  ParameterValue: "\\n"
+        S3BackupMode: Disabled
+        S3BackupConfiguration:
+          BucketARN: !GetAtt RawDataBucket.Arn
+          BufferingHints:
+            IntervalInSeconds: '60'
+            SizeInMBs: '50'
+          CompressionFormat: UNCOMPRESSED
+          RoleARN: !GetAtt DeliveryRole.Arn
+
+  # NOTE This is not currently used but would be if logging options
+  # were enabled for the firehose
+  FirehoseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/kinesisfirehose/${RawEventsFirehose}"
+      RetentionInDays: 7
+
+  DeliveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref 'AWS::AccountId'
+  DeliveryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firehose-delivery-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:AbortMultipartUpload'
+              - 's3:GetBucketLocation'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:PutObject'
+            Resource:
+              - !Sub "arn:aws:s3:::${RawDataBucket}"
+              - !Sub "arn:aws:s3:::${RawDataBucket}*"
+          - Effect: Allow
+            Action:
+              - 'kinesis:DescribeStream'
+              - 'kinesis:GetShardIterator'
+              - 'kinesis:GetRecords'
+            Resource: !GetAtt RawRecordsStream.Arn
+      Roles:
+        - !Ref DeliveryRole
+
+# Outputs:
