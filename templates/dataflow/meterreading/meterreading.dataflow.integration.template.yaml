@@ -46,9 +46,10 @@ Resources:
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueDatabase
+      TablePrefix: Meter_Readings_Raw_
       Targets:
         S3Targets:
-          - Path: !Ref RawDataBucket
+          - Path: !Sub "s3://${RawDataBucket}/readings/json"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -161,3 +162,4 @@ Resources:
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
       Roles:
         - !Ref GlueJobRole
+        - !Ref GlueCrawlerRole

@@ -22,7 +22,7 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  DatastorageStack:
+  DataStorageStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub
@@ -50,9 +50,9 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !GetAtt DatastorageStack.Outputs.RawDataBucket
-        IntegratedDataBucket: !GetAtt DatastorageStack.Outputs.IntegratedDataBucket
-        GlueDatabase: !GetAtt DatastorageStack.Outputs.GlueDatabase
+        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        GlueDatabase: !GetAtt DataStorageStack.Outputs.GlueDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
@@ -68,10 +68,10 @@ Outputs:
     Value: !Sub '${AWS::StackName}'
   RawDataBucket:
     Description: S3 Bucket that contains the raw data.
-    Value: !GetAtt DatastorageStack.Outputs.RawDataBucket
+    Value: !GetAtt DataStorageStack.Outputs.RawDataBucket
   IntegratedDataBucket:
     Description: S3 Bucket that contains the integrated data.
-    Value: !GetAtt DatastorageStack.Outputs.IntegratedDataBucket
+    Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
   Subnet1ID:
