@@ -33,6 +33,9 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
+        --MDA_DATABASE: !Ref GlueDatabase
+        --RAW_TABLE_NAME: meter_readings_raw_json
+        --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       ExecutionProperty:
         MaxConcurrentRuns: 2
@@ -46,7 +49,7 @@ Resources:
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueDatabase
-      TablePrefix: Meter_Readings_Raw_
+      TablePrefix: meter_readings_raw_
       Targets:
         S3Targets:
           - Path: !Sub "s3://${RawDataBucket}/readings/json"
@@ -59,9 +62,10 @@ Resources:
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueDatabase
+      TablePrefix: meter_readings_integrated_
       Targets:
         S3Targets:
-          - Path: !Ref IntegratedDataBucket
+          - Path: !Sub "s3://${IntegratedDataBucket}/readings/parquet"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -155,11 +159,27 @@ Resources:
             Action:
               - 's3:GetObject'
               - 's3:PutObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
             Resource:
               - !Sub "arn:aws:s3:::${RawDataBucket}"
               - !Sub "arn:aws:s3:::${RawDataBucket}/*"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}/*"
+          - Effect: Allow
+            Action:
+              - 'glue:GetTable*'
+              - 'glue:GetPartition*'
+              - 'glue:BatchCreatePartition'
+              - 'glue:BatchGetPartition'
+              - 'glue:BatchUpdatePartition'
+            Resource:
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/meter_readings_raw_json"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/meter_readings_integrated_parquet"
       Roles:
         - !Ref GlueJobRole
         - !Ref GlueCrawlerRole
