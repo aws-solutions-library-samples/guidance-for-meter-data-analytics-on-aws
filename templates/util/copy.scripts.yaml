@@ -1,30 +1,30 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Copies demo data to destination. (qs-1r18anahd)"
+Description: "Creates glue S3 buckets and upload scripts to it. (qs-1r18anahd)"
 Resources:
+    MdaGlueScriptBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: Private
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: True
+          BlockPublicPolicy: True
+          IgnorePublicAcls: True
+          RestrictPublicBuckets: True
+        VersioningConfiguration:
+          Status: Enabled
 
-    CopyGeoData:
+    CopyArtifacts:
       Type: Custom::CopyArtifacts
       Properties:
-        ServiceToken: !GetAtt 'CopyDemoDataFunction.Arn'
-        DestBucket: !Ref BusinessZoneS3Bucket
-        DestPrefix: 'geodata/'
-        SourceBucket: !Ref 'QSS3BucketName'
-        Prefix: !Sub '${QSS3KeyPrefix}assets/data/'
+        ServiceToken: !GetAtt 'CopyArtifactsFunction.Arn'
+        DestBucket: !Ref MdaGlueScriptBucket
+        DestPrefix: 'scripts/'
+        SourceBucket: !Ref QSS3BucketName
+        Prefix: !Sub '${QSS3KeyPrefix}assets/glue/scripts/'
         Objects:
-          - meter-geo-data.csv
+          - meterreadings-integration-job.py
 
-    CopyCisData:
-      Type: Custom::CopyArtifacts
-      Properties:
-        ServiceToken: !GetAtt 'CopyDemoDataFunction.Arn'
-        DestBucket: !Ref BusinessZoneS3Bucket
-        DestPrefix: 'cisdata/'
-        SourceBucket: !Ref 'QSS3BucketName'
-        Prefix: !Sub '${QSS3KeyPrefix}assets/data/'
-        Objects:
-          - cis-data.csv
-
-    CopyDemoDataRole:
+    CopyArtifactsRole:
       Type: AWS::IAM::Role
       Properties:
         AssumeRolePolicyDocument:
@@ -56,16 +56,16 @@ Resources:
                     - s3:GetObjectAttributes
                     - s3:ListBucket
                   Resource:
-                    - !Sub 'arn:${AWS::Partition}:s3:::${BusinessZoneS3Bucket}/*'
-                    - !Sub 'arn:${AWS::Partition}:s3:::${BusinessZoneS3Bucket}'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}'
 
-    CopyDemoDataFunction:
+    CopyArtifactsFunction:
       Type: AWS::Lambda::Function
       Properties:
         Description: Copies objects from a source S3 bucket to a destination
         Handler: index.handler
         Runtime: python3.7
-        Role: !GetAtt 'CopyDemoDataRole.Arn'
+        Role: !GetAtt CopyArtifactsRole.Arn
         Timeout: 240
         Code:
           ZipFile: |
@@ -128,6 +128,10 @@ Resources:
                     timer.cancel()
                     cfnresponse.send(event, context, status, {}, None)
 
+Outputs:
+  MdaGlueScriptBucket:
+      Value: !Ref MdaGlueScriptBucket
+    
 Parameters:
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
@@ -136,6 +140,4 @@ Parameters:
   QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     Default: quickstart-aws-utility-meter-data-analytics-platform/
-    Type: String
-  BusinessZoneS3Bucket:
     Type: String

@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+
+Resources:
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+
+  IntegratedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref "AWS::AccountId"
+      DatabaseInput:
+        Name: !Ref GlueDatabaseName
+
+Parameters:
+  GlueDatabaseName:
+    Type: String
+    Default: "mda_database"
+    Description: "Name of the central Glue database."
+
+Outputs:
+  RawDataBucket:
+    Value: !Ref RawDataBucket
+    Description: S3 Bucket that contains the raw data.
+  IntegratedDataBucket:
+    Value: !Ref IntegratedDataBucket
+    Description: S3 Bucket that contains the integrated data.
+  GlueDatabase:
+    Value: !Ref GlueDatabase
+    Description: The central Glue Database
