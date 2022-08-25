@@ -294,29 +294,3 @@ Outputs:
   StackName:
     Description: 'Stack name'
     Value: !Sub '${AWS::StackName}'
-  RedshiftClusterEndpoint:
-    Description: Amazon Redshift cluster endpoint address with port
-    Value: !GetAtt Workload.Outputs.RedshiftClusterEndpoint
-    Condition: ShouldCreateRedshiftConsumption
-  RedshiftEndpoint:
-    Description: Amazon Redshift endpoint address
-    Value: !GetAtt Workload.Outputs.RedshiftEndpoint
-    Condition: ShouldCreateRedshiftConsumption
-  GlueWorkflowName:
-    Description: AWS Glue workflow name
-    Value: !GetAtt Workload.Outputs.GlueWorkflowName
-  LandingZoneS3Bucket:
-    Description: Landing zone S3 bucket name
-    Value: !GetAtt Workload.Outputs.LandingZoneS3Bucket
-  CleanZoneS3Bucket:
-    Description: Clean zone S3 bucket name
-    Value: !GetAtt Workload.Outputs.CleanZoneS3Bucket
-  TempWorkflowS3Bucket:
-    Description: Clean zone S3 bucket name
-    Value: !GetAtt Workload.Outputs.TempWorkflowS3Bucket
-  BusinessZoneS3Bucket:
-    Description: Business zone S3 bucket name
-    Value: !GetAtt Workload.Outputs.BusinessZoneS3Bucket
-  Postdeployment:
-    Description: See the deployment guide for postdeployment steps.
-    Value: https://aws.amazon.com/quickstart/?quickstart-all.sort-by=item.additionalFields.sortDate&quickstart-all.sort-order=desc&awsm.page-quickstart-all=5
