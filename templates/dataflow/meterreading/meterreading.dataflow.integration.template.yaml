@@ -26,7 +26,7 @@ Resources:
         ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/meterreadings-integration-job.py
         PythonVersion: "3"
       DefaultArguments:
-        --TempDir: !Sub "s3://${GlueScriptLocation}/temp/"
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
         --enable-metrics: "true"
         --enable-continuous-cloudwatch-log: "true"
         --enable-continuous-log-filter: "true"
@@ -103,7 +103,7 @@ Resources:
         - CrawlerName: !Ref IntegratedDataBucketCrawler
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref IntegrateMeterreadingsGlueJob
+      WorkflowName: !Ref MeterreadingGlueWorkflow
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"

@@ -62,14 +62,8 @@ Resources:
           RoleARN: !GetAtt DeliveryRole.Arn
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: !Ref FirehoseLogGroup
+          LogGroupName: "/aws/kinesisfirehose/raweventsfirehouse"
           LogStreamName: "rawEvents"
-
-  FirehoseLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/kinesisfirehose/${RawEventsFirehose}"
-      RetentionInDays: 7
 
   DeliveryRole:
     Type: AWS::IAM::Role
