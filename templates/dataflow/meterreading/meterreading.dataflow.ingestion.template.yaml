@@ -32,7 +32,7 @@ Resources:
           SizeInMBs: '100'
         CompressionFormat: UNCOMPRESSED
         ErrorOutputPrefix: "errors/json/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}"
-        Prefix: "measures/json/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/hour=!{partitionKeyFromQuery:hour}/"
+        Prefix: "readings/json/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/hour=!{partitionKeyFromQuery:hour}/"
         DynamicPartitioningConfiguration:
           Enabled: true
           RetryOptions:
@@ -62,8 +62,19 @@ Resources:
           RoleARN: !GetAtt DeliveryRole.Arn
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: "/aws/kinesisfirehose/raweventsfirehouse"
-          LogStreamName: "rawEvents"
+          LogGroupName: !Ref RawEventsFirehoseLogGroup
+          LogStreamName: !Ref RawEventsFirehoseLogStream
+
+  RawEventsFirehoseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+      LogGroupName: "/aws/meter_readings/raw_events_firehouse"
+
+  RawEventsFirehoseLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref RawEventsFirehoseLogGroup
 
   DeliveryRole:
     Type: AWS::IAM::Role
