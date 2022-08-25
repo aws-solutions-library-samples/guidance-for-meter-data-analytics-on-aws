@@ -2,18 +2,11 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
 
-Resources:
+Parameters:
   RawDataBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      AccessControl: Private
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      VersioningConfiguration:
-        Status: Enabled
+    Type: String
+
+Resources:
   RawRecordsStream:
     Type: AWS::Kinesis::Stream
     Properties:
@@ -31,8 +24,9 @@ Resources:
       KinesisStreamSourceConfiguration:
         KinesisStreamARN: !GetAtt RawRecordsStream.Arn
         RoleARN: !GetAtt DeliveryRole.Arn
+
       ExtendedS3DestinationConfiguration:
-        BucketARN: !GetAtt RawDataBucket.Arn
+        BucketARN: !Sub "arn:aws:s3:::${RawDataBucket}"
         BufferingHints:
           IntervalInSeconds: '60'
           SizeInMBs: '100'
@@ -60,15 +54,17 @@ Resources:
                   ParameterValue: "\\n"
         S3BackupMode: Disabled
         S3BackupConfiguration:
-          BucketARN: !GetAtt RawDataBucket.Arn
+          BucketARN: !Sub "arn:aws:s3:::${RawDataBucket}"
           BufferingHints:
             IntervalInSeconds: '60'
             SizeInMBs: '50'
           CompressionFormat: UNCOMPRESSED
           RoleARN: !GetAtt DeliveryRole.Arn
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref FirehoseLogGroup
+          LogStreamName: "rawEvents"
 
-  # NOTE This is not currently used but would be if logging options
-  # were enabled for the firehose
   FirehoseLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -116,4 +112,7 @@ Resources:
       Roles:
         - !Ref DeliveryRole
 
-# Outputs:
+Outputs:
+  RawRecordsStream:
+    Value: !Ref RawRecordsStream
+    Description: Name of the raw record kinesis stream.

@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys the data cataloging workflow. (qs-1r18anahd)"
+
+Parameters:
+  RawDataBucket:
+    Type: String
+  IntegratedDataBucket:
+    Type: String
+  GlueDatabase:
+    Type: String
+  MdaGlueScriptBucket:
+    Type: String
+
+Resources:
+  #
+  # Glue Jobs
+  #
+  IntegrateMeterreadingsGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: integrate-meterreadings
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/meterreadings-integration-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${GlueScriptLocation}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-s3-parquet-optimized-committer: true
+      MaxRetries: 0
+      ExecutionProperty:
+        MaxConcurrentRuns: 2
+      GlueVersion: "3.0"
+
+  #
+  # Glue Crawlers
+  #
+  RawDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueDatabase
+      Targets:
+        S3Targets:
+          - Path: !Ref RawDataBucket
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  IntegratedDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueDatabase
+      Targets:
+        S3Targets:
+          - Path: !Ref IntegratedDataBucket
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  #
+  # Glue Workflow
+  #
+  MeterreadingGlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties:
+      Description: Meterreading Glue workflow to move data from raw to integrated zone.
+
+  GlueWorkflowTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Actions:
+        - CrawlerName: !Ref RawDataBucketCrawler
+      Type: ON_DEMAND
+      Description: "A on demand trigger for the glue workflow."
+      WorkflowName: !Ref MeterreadingGlueWorkflow
+
+  IntegrationJobTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Type: "CONDITIONAL"
+      StartOnCreation: true
+      WorkflowName: !Ref MeterreadingGlueWorkflow
+      Actions:
+        - JobName: !Ref IntegrateMeterreadingsGlueJob
+      Predicate:
+        Conditions:
+          - LogicalOperator: "EQUALS"
+            CrawlerName: !Ref RawDataBucketCrawler
+            CrawlState: "SUCCEEDED"
+
+  IntegratedDataBucketCrawlerGlueTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Actions:
+        - CrawlerName: !Ref IntegratedDataBucketCrawler
+      Type: "CONDITIONAL"
+      StartOnCreation: true
+      WorkflowName: !Ref IntegrateMeterreadingsGlueJob
+      Predicate:
+        Conditions:
+          - LogicalOperator: "EQUALS"
+            JobName: !Ref IntegrateMeterreadingsGlueJob
+            State: "SUCCEEDED"
+
+  #
+  # Iam Roles
+  #
+  GlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSGlueServiceRole"
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  S3MeterreadingBucketAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-glue-meterreading-bucket-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource:
+              - !Sub "arn:aws:s3:::${RawDataBucket}"
+              - !Sub "arn:aws:s3:::${RawDataBucket}/*"
+              - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
+      Roles:
+        - !Ref GlueJobRole

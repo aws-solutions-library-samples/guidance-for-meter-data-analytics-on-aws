@@ -110,29 +110,16 @@ Resources:
             - !Ref 'AWS::Region'
             - !Ref 'QSS3BucketRegion'
       Parameters:
-        IncludeRedshift: !Ref IncludeRedshift
-        IncludeEtlAggregationWfl: !Ref IncludeEtlAggregationWfl
-        AdminUsername: !Ref AdminUsername
-        AdminUserPassword: !Ref AdminUserPassword
-        ClusterName: !Ref ClusterName
-        Subnet1ID: 
+        Subnet1ID:
           Fn::GetAtt: [VPC, Outputs.PrivateSubnet1AID]
         Subnet2ID: 
           Fn::GetAtt: [VPC, Outputs.PrivateSubnet2AID]
         VPCID: 
           Fn::GetAtt: [VPC, Outputs.VPCID]
         RemoteAccessCIDR: !Ref RemoteAccessCIDR
-        LandingzoneTransformer: !Ref LandingzoneTransformer
-        CreateLandingZoneS3Bucket: !Ref CreateLandingZoneS3Bucket
-        LandingZoneS3BucketName: !Ref LandingZoneS3BucketName
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
-        DBName: !Ref DBName
-        NoOfMeters: !Ref NoOfMeters
-        WithWeather: !Ref WithWeather
-        DeploySpecialAdapters: !Ref DeploySpecialAdapters
-        GrafanaAthenaWorkgroup: !Ref GrafanaAthenaWorkgroup
 
 Conditions:
   UsingDefaultBucket: !Equals
