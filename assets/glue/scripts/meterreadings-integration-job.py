@@ -27,8 +27,7 @@ ApplyMapping_node2 = ApplyMapping.apply(
         ("meter_id", "string", "meter_id", "string"),
         ("reading_value", "string", "reading_value", "double"),
         ("reading_type", "string", "reading_type", "string"),
-        ("reading_date_time", "string", "reading_date_time", "string"),
-        ("reading_date_time", "string", "parsed_reading_date_time", "timestamp"),
+        ("reading_date_time", "string", "reading_date_time", "timestamp"),
         ("unit", "string", "unit", "string"),
         ("obis_code", "string", "obis_code", "string"),
         ("phase", "string", "phase", "string"),
@@ -42,7 +41,7 @@ ApplyMapping_node2 = ApplyMapping.apply(
 )
 
 def parse_date(df):
-    dt = pd.to_datetime(df["parsed_reading_date_time"]).dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+    dt = pd.to_datetime(df["reading_date_time"]).dt.strftime('%Y-%m-%d %H:%M:%S.%f')
     return dt
 
 CustomMapping_node3 = Map.apply(frame = ApplyMapping_node2 , f = parse_date, transformation_ctx = "custommapping1")
