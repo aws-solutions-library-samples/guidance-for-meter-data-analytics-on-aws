@@ -14,6 +14,8 @@ Parameters:
     Type: String
   MdaGlueScriptBucket:
     Type: String
+  IntegrationBus:
+    Type: String
 
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -64,6 +66,7 @@ Resources:
             ]
       Parameters:
         RawDataBucket: !Ref RawDataBucket
+        IntegrationBus: !Ref IntegrationBus
 
   # MeteringDataflowIntegrationStack
   IntegrationMeterreadingDataflowStack:
