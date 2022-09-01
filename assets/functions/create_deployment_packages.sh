@@ -10,6 +10,7 @@ functions=(
            "meter_forecast" \
            "redshift/consumption" \
            "get_anomaly"  \
+           "late_arriving_notification" \
            "ml_pipeline/crawler/trigger_glue_crawler" \
            "ml_pipeline/crawler/get_glue_crawler_state" \
            "ml_pipeline/upload_result"  \
