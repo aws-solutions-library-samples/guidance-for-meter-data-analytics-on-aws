@@ -16,7 +16,7 @@ Resources:
   #
   # Glue Jobs
   #
-  IntegrateMeterreadingsGlueJob:
+  IntegrateMeterReadingsGlueJob:
     Type: AWS::Glue::Job
     Properties:
       Name: integrate-meterreadings
@@ -73,7 +73,7 @@ Resources:
   #
   # Glue Workflow
   #
-  MeterreadingGlueWorkflow:
+  MeterReadingGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
       Description: Meterreading Glue workflow to move data from raw to integrated zone.
@@ -85,16 +85,16 @@ Resources:
         - CrawlerName: !Ref RawDataBucketCrawler
       Type: ON_DEMAND
       Description: "A on demand trigger for the glue workflow."
-      WorkflowName: !Ref MeterreadingGlueWorkflow
+      WorkflowName: !Ref MeterReadingGlueWorkflow
 
   IntegrationJobTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref MeterreadingGlueWorkflow
+      WorkflowName: !Ref MeterReadingGlueWorkflow
       Actions:
-        - JobName: !Ref IntegrateMeterreadingsGlueJob
+        - JobName: !Ref IntegrateMeterReadingsGlueJob
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
@@ -108,11 +108,11 @@ Resources:
         - CrawlerName: !Ref IntegratedDataBucketCrawler
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref MeterreadingGlueWorkflow
+      WorkflowName: !Ref MeterReadingGlueWorkflow
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
-            JobName: !Ref IntegrateMeterreadingsGlueJob
+            JobName: !Ref IntegrateMeterReadingsGlueJob
             State: "SUCCEEDED"
 
   #
@@ -148,7 +148,7 @@ Resources:
               - "sts:AssumeRole"
       Path: "/"
 
-  S3MeterreadingBucketAccessPolicy:
+  S3MeterReadingBucketAccessPolicy:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: s3-glue-meterreading-bucket-policy

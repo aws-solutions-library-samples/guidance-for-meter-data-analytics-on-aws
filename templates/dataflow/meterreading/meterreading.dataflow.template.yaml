@@ -51,7 +51,7 @@ Parameters:
 Resources:
   # MeterringDataflowInputAdapterStack
 
-  IngestionMeterreadingDataflowStack:
+  IngestionMeterReadingDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub
@@ -67,9 +67,12 @@ Resources:
       Parameters:
         RawDataBucket: !Ref RawDataBucket
         IntegrationBus: !Ref IntegrationBus
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 
   # MeteringDataflowIntegrationStack
-  IntegrationMeterreadingDataflowStack:
+  IntegrationMeterReadingDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub
