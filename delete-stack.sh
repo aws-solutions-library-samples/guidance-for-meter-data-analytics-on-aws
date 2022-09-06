@@ -2,14 +2,14 @@
 
 set -e
 
-REGION="us-east-1"
+REGION=${1:-us-east-1}
 BUCKETS=`aws s3 ls`
 STACK_NAME=meter-data-lake
 
 for bucket in $BUCKETS
 do
 
-  if  [[ $bucket == meter-data-* ]] || [[ $bucket == aws-glue-* ]] ;
+  if  [[ $bucket == meter-data-* ]] ;
   then
       echo "Deleting bucket: $bucket"
       {

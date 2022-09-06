@@ -2,334 +2,96 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "Workload template to deploy the AWS Quick Start for the Utility Meter Data Analytics platform in an existing VPC. (qs-1r18anahd)"
 Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
-  DeployAdapter: !Not [ !Equals [!Ref DeploySpecialAdapters, 'None'] ]
-  ShouldCreateRedshiftConsumption: !Equals [ 'True', !Ref IncludeRedshift ]
-  ShouldCreateEtlAggregationWfl: !Equals [ 'True', !Ref IncludeEtlAggregationWfl ]
-Rules:
-  LZS3BucketNameProvided:
-    RuleCondition: !Equals [!Ref CreateLandingZoneS3Bucket, 'No']
-    Assertions:
-      - Assert: !Not [!Equals [!Ref LandingZoneS3BucketName, '']]
-        AssertDescription: You must provide a value for 'Landing Zone S3Bucket Name' when value of 'Create Landing Zone S3Bucket' is No. 
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Resources:
+  CopyGlueScriptsStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/util/copy.scripts.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-    RedshiftStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Condition: ShouldCreateRedshiftConsumption
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/redshift.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          AdminUsername: !Ref AdminUsername
-          AdminUserPassword: !Ref AdminUserPassword
-          Subnet1ID: !Ref Subnet1ID
-          Subnet2ID: !Ref Subnet2ID
-          VPCID: !Ref VPCID
-          RemoteAccessCIDR: !Ref RemoteAccessCIDR
-          ClusterName: !Ref ClusterName
-          ClusterNodeType: !FindInMap [MeterCountMap, !Ref "NoOfMeters", RedshiftNodeType]
-          ClusterNodeCount: !FindInMap [MeterCountMap, !Ref "NoOfMeters", RedshiftNumberOfNodes]
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-          GlueCrawlerToTriggerAfter: !GetAtt GlueStack.Outputs.NameCrawlerBusinessDaily
-          GlueDPU: !FindInMap [MeterCountMap, !Ref "NoOfMeters", DPU]
-          GlueScriptsS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueScriptsS3Bucket
-          GlueTempS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueTempS3Bucket
-          BusinessZoneS3Bucket: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-          TempWorkflowS3Bucket: !GetAtt GlueStack.Outputs.TempWorkflowS3Bucket
-          QSS3BucketRegion: !Ref QSS3BucketRegion
-          DbName: !Ref DBName
+  IntegrationStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/integration.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-    CopyScriptsStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-scripts.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  DataStorageStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/datastorage/datastorage.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
 
-    GlueStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/glue/glue.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          DBName: !Ref DBName
-          GlueScriptsS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueScriptsS3Bucket
-          GlueTempS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueTempS3Bucket
-          LandingzoneTransformer: !Ref LandingzoneTransformer
-          CreateLandingZoneS3Bucket: !Ref CreateLandingZoneS3Bucket
-          LandingZoneS3BucketName: !Ref LandingZoneS3BucketName
-          DPU: !FindInMap [MeterCountMap, !Ref "NoOfMeters", DPU]
+  MeterreadingsDataflowStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        GlueDatabase: !GetAtt DataStorageStack.Outputs.GlueDatabase
+        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+        IntegrationBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 
-    GlueAggregationWflStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Condition: ShouldCreateEtlAggregationWfl
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/glue/glue-wfl-aggregation.yaml'
-          - S3Region:
-              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-            S3Bucket:
-              !If [
-                  UsingDefaultBucket,
-                  !Sub '${QSS3BucketName}-${AWS::Region}',
-                  !Ref QSS3BucketName,
-              ]
-        Parameters:
-          GlueScriptsS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueScriptsS3Bucket
-          GlueTempS3Bucket: !GetAtt CopyScriptsStack.Outputs.GlueTempS3Bucket
-          DBName: !Ref DBName
-          DPU: !FindInMap [MeterCountMap, !Ref "NoOfMeters", DPU]
-          TempWorkflowS3Bucket: !GetAtt GlueStack.Outputs.TempWorkflowS3Bucket
-          BusinessZoneS3Bucket: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-          GlueRoleArn: !GetAtt GlueStack.Outputs.GlueRoleArn
-          TriggerName: !GetAtt GlueStack.Outputs.NameCrawlerBusinessDaily
 
-    AdapterStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Condition: DeployAdapter
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/adapter.yaml'
-          - S3Region:
-              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-            S3Bucket:
-              !If [
-                  UsingDefaultBucket,
-                  !Sub '${QSS3BucketName}-${AWS::Region}',
-                  !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-          LandingZoneS3Bucket: !GetAtt GlueStack.Outputs.LandingZoneS3Bucket
-          LandingzoneTransformer: !Ref LandingzoneTransformer
 
-    GlueTablesStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/glue/glue-tables.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          BusinessZoneS3Bucket: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-          DBName: !Ref DBName
 
-    MachineLearningPipelineConfigStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/prediction/ml-pipeline-config.yaml'
-          - S3Region:
-              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-            S3Bucket:
-              !If [
-                  UsingDefaultBucket,
-                  !Sub '${QSS3BucketName}-${AWS::Region}',
-                  !Ref QSS3BucketName,
-              ]
-
-    MachineLearningPipelineStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/prediction/ml-pipeline.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-          DBName: !Ref DBName
-          GlueCrawlerNameTrigger: !GetAtt GlueStack.Outputs.NameCrawlerBusinessDaily
-          WithWeather: !Ref WithWeather
-          BusinessZoneS3Bucket: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-          ConfigTable: !GetAtt MachineLearningPipelineConfigStack.Outputs.MachineLearningPipelineConfigTable
-
-    PredictionApiStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/prediction/prediction-api.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-          AthenaQueryBucket: !GetAtt MachineLearningPipelineStack.Outputs.AthenaQueryBucket
-          WorkingBucket: !GetAtt MachineLearningPipelineStack.Outputs.WorkingBucket
-          WithWeather: !Ref WithWeather
-          ConfigTable: !GetAtt MachineLearningPipelineConfigStack.Outputs.MachineLearningPipelineConfigTable
-          DBName: !Ref DBName
-
-    CopyDemoDataStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-demo-data.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-          BusinessZoneS3Bucket: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-
-    SagemakerStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/prediction/sagemaker.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          QSS3BucketName: !Ref QSS3BucketName
-          QSS3KeyPrefix: !Ref QSS3KeyPrefix
-
-    GrafanaStack:
-      Type: 'AWS::CloudFormation::Stack'
-      Properties:
-        TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/grafana.yaml'
-          - S3Region:
-              !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket:
-              !If [
-                UsingDefaultBucket,
-                !Sub '${QSS3BucketName}-${AWS::Region}',
-                !Ref QSS3BucketName,
-              ]
-        Parameters:
-          AthenaQueryBucket: !GetAtt MachineLearningPipelineStack.Outputs.AthenaQueryBucket
-          AthenaWorkgroup: !Ref GrafanaAthenaWorkgroup
-
-Mappings: 
-  MeterCountMap: 
-    "1-50K":
-      "DPU": 11
-      RedshiftNodeType: ra3.4xlarge
-      RedshiftNumberOfNodes: 2
-    "50K-1Mil":
-      "DPU": 31
-      RedshiftNodeType: ra3.4xlarge
-      RedshiftNumberOfNodes: 2
-    "1Mil-5Mil":
-      "DPU": 41
-      RedshiftNodeType: ra3.4xlarge
-      RedshiftNumberOfNodes: 4
-    "5Mil-and-more":
-      "DPU": 101
-      RedshiftNodeType: ra3.16xlarge
-      RedshiftNumberOfNodes: 2
 
 Outputs:
   StackName:
     Description: 'Stack name'
     Value: !Sub '${AWS::StackName}'
-  RedshiftClusterEndpoint:
-    Description: Amazon Redshift cluster endpoint address with port
-    Value: !GetAtt RedshiftStack.Outputs.RedshiftClusterEndpoint
-    Condition: ShouldCreateRedshiftConsumption
-  RedshiftEndpoint:
-    Description: Amazon Redshift endpoint address
-    Value: !GetAtt RedshiftStack.Outputs.RedshiftEndpoint
-    Condition: ShouldCreateRedshiftConsumption
-  GlueWorkflowName:
-    Description: Glue workflow name
-    Value: !GetAtt GlueStack.Outputs.GlueWorkflow
-  LandingZoneS3Bucket:
-    Description: Landing zone S3 bucket name
-    Value: !GetAtt GlueStack.Outputs.LandingZoneS3Bucket
-  CleanZoneS3Bucket:
-    Description: Clean zone S3 bucket name
-    Value: !GetAtt GlueStack.Outputs.CleanZoneS3Bucket
-  TempWorkflowS3Bucket:
-    Description: Clean zone S3 bucket name
-    Value: !GetAtt GlueStack.Outputs.TempWorkflowS3Bucket
-  BusinessZoneS3Bucket:
-    Description: Business zone S3 bucket name
-    Value: !GetAtt GlueStack.Outputs.BusinessZoneS3Bucket
-  Postdeployment:
-    Description: See the deployment guide for postdeployment steps.
-    Value: https://aws.amazon.com/quickstart/?quickstart-all.sort-by=item.additionalFields.sortDate&quickstart-all.sort-order=desc&awsm.page-quickstart-all=5
+  RawDataBucket:
+    Description: S3 Bucket that contains the raw data.
+    Value: !GetAtt DataStorageStack.Outputs.RawDataBucket
+  IntegratedDataBucket:
+    Description: S3 Bucket that contains the integrated data.
+    Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
-  AdminUsername:
-    Type: String
-    Description: Administrator user name for the Amazon Redshift cluster. The user name must be lowercase, begin with a letter, contain only alphanumeric characters, '_', '+', '.', '@', or '-', and be less than 128 characters.
-    MinLength: '1'
-    MaxLength: '128'
-    AllowedPattern : '([a-z])([a-z]|[0-9]|[_+.@-])*'
-
-  AdminUserPassword:
-    Type: String
-    Description: Administrator user password for the Amazon Redshift cluster. The password must be 8–64 characters, contain at least one uppercase letter, at least one lowercase letter, and at least one number. It can only contain ASCII characters (ASCII codes 33-126), except ' (single quotation mark), " (double quotation mark), /, \, or @.
-    NoEcho: True
-    MinLength: '8'
-    MaxLength: '64'
-    AllowedPattern: '^(?=.*[A-Z])(?=.*[\W_])(?=.*[0-9])(?=.*[a-z])(?!.*[@"/\\]).{8,64}$'
-  ClusterName:
-    Type: String
-    Default: redshift-cluster-1
-    Description: Amazon Redshift cluster name.
-
   Subnet1ID:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet 1 ID to create the Amazon Redshift cluster.
@@ -347,40 +109,19 @@ Parameters:
     Default: 0.0.0.0/0
     Description: CIDR block from which access to the Amazon Redshift cluster is allowed.
 
-  LandingzoneTransformer:
-    Type: String
-    Default: london
-    Description: Defines the transformer for the input data in the landing zone. The default is the transformer that works with the London test data set.
-    AllowedValues:
-      - default
-      - london
-  
-  CreateLandingZoneS3Bucket:
-    Type: String
-    Default: 'Yes'
-    Description: Choose "No" only if you have an existing S3 bucket with raw meter data that you want to use. If you choose "No," you must provide a value for the landing-zone S3 bucket name (`LandingZoneS3BucketName`).
-    AllowedValues:
-      - 'Yes'
-      - 'No'
-  
-  LandingZoneS3BucketName:
-    Type: String
-    Default: ""
-    Description: You must provide a value if you chose "No" for the parameter CreateLandingZoneS3Bucket. Otherwise, keep this box blank.
-
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription:
       The Quick Start bucket name can include numbers, lowercase
-      letters, uppercase letters, and hyphens (-). It cannot start or end with a 
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a
       hyphen (-).
     Default: aws-quickstart
     Description:
-      Name of the S3 bucket for your copy of the Quick Start assets. 
-      Keep the default name unless you are customizing the template. 
-      Changing the name updates code references to point to a new Quick 
-      Start location. This name can include numbers, lowercase letters, 
-      uppercase letters, and hyphens, but do not start or end with a hyphen (-). 
+      Name of the S3 bucket for your copy of the Quick Start assets.
+      Keep the default name unless you are customizing the template.
+      Changing the name updates code references to point to a new Quick
+      Start location. This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
       See https://aws-quickstart.github.io/option1.html.
     Type: String
   
@@ -392,12 +133,12 @@ Parameters:
       end with a forward slash (/).
     Default: quickstart-aws-utility-meter-data-analytics-platform/
     Description:
-      S3 key prefix that is used to simulate a directory for your copy of the 
-      Quick Start assets. Keep the default prefix unless you are customizing 
-      the template. Changing this prefix updates code references to point to 
-      a new Quick Start location. This prefix can include numbers, lowercase 
-      letters, uppercase letters, hyphens (-), and forward slashes (/). End with 
-      a forward slash. See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html 
+      S3 key prefix that is used to simulate a directory for your copy of the
+      Quick Start assets. Keep the default prefix unless you are customizing
+      the template. Changing this prefix updates code references to point to
+      a new Quick Start location. This prefix can include numbers, lowercase
+      letters, uppercase letters, hyphens (-), and forward slashes (/). End with
+      a forward slash. See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
       and https://aws-quickstart.github.io/option1.html.
     Type: String
   
@@ -409,53 +150,6 @@ Parameters:
     When using your own bucket, specify the Region. 
     See https://aws-quickstart.github.io/option1.html.'
     Type: String
-  
-  DBName:
-    Type: String
-    Default: meterdata
-    Description: Name of the Amazon Redshift database.
-
-  NoOfMeters:
-    Type: String
-    Description: Approximate number of meters in your dataset that need to be processed by the pipeline. This is used to configure the appropriate number of Data Processing Units (DPUs) for the AWS Glue job. The default value works for sample datasets or evaluation purposes. For a production deployment with millions of meters, choose `5Mil-and-more.`
-    AllowedValues:
-      - "1-50K"
-      - "50K-1Mil"
-      - "1Mil-5Mil"
-      - "5Mil-and-more"
-    Default: "1-50K"
-
-  WithWeather:
-    Type: String
-    Default: 0
-    Description: >-
-      Enables or disables the use of weather data.
-      0 = Weather data won't be used.
-      1 = Enable use of weather data.
-
-  DeploySpecialAdapters:
-    Type: String
-    Default: None
-    Description: Choose `mrasco` to deploy the MRA Service Company (MRASCo) data adapter. This includes an S3 bucket to store MRASCo data, an AWS Lambda function to transform MRASCo data to MDA format, and an S3 agent to invoke the function.
-    AllowedValues:
-      - None
-      - mrasco
-
-  IncludeRedshift:
-    Type: String
-    Description: Deploy Amazon Redshift consumption hub.
-    AllowedValues: ['True','False']
-    Default: 'True'
-
-  IncludeEtlAggregationWfl:
-    Type: String
-    Description: Deploy the ETL aggregation workflow.
-    AllowedValues: ['True','False']
-    Default: 'True'
-  GrafanaAthenaWorkgroup:
-    Type: String
-    Default: grafana-athena-workgroup
-    Description: Name of the athena workgroup grafana will use to query.
 
 
 Metadata:
@@ -464,14 +158,6 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Amazon Redshift cluster configuration
-        Parameters:
-          - IncludeRedshift
-          - AdminUsername
-          - AdminUserPassword
-          - ClusterName
-          - DBName
-      - Label:
           default: Network configuration
         Parameters:
           - VPCID
@@ -479,33 +165,12 @@ Metadata:
           - Subnet2ID
           - RemoteAccessCIDR
       - Label:
-          default: 'Glue configuration'
-        Parameters:
-          - LandingzoneTransformer
-          - CreateLandingZoneS3Bucket
-          - LandingZoneS3BucketName
-          - DeploySpecialAdapters
-          - NoOfMeters
-          - IncludeEtlAggregationWfl
-      - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
           - QSS3BucketRegion
     ParameterLabels:
-      IncludeRedshift:
-        default: Include Redshift cluster resources
-      IncludeEtlAggregationWfl:
-        default: Include ETL aggregation workflow
-      AdminUsername:
-        default: Admin user name
-      AdminUserPassword:
-        default: Admin user password
-      ClusterName:
-        default: Amazon Redshift cluster name
-      DBName:
-        default: Amazon Redshift database name
       Subnet1ID:
         default: Subnet 1 ID
       Subnet2ID:
@@ -520,15 +185,3 @@ Metadata:
         default: Quick Start S3 key prefix
       QSS3BucketRegion:
         default: Quick Start S3 bucket Region
-      LandingzoneTransformer:
-        default: Transformer that reads the landing-zone data
-      CreateLandingZoneS3Bucket:
-        default: Create landing-zone bucket
-      LandingZoneS3BucketName:
-        default: Landing-zone S3 bucket
-      NoOfMeters:
-        default: Number of meters
-      WithWeather:
-        default: Weather data availability
-      DeploySpecialAdapters:
-        default: Special data adapters for metering conversions
