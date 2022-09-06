@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aws-quickstart.github.io/quickstart-aws-utility-meter-data-analytics-platform/meterdata",
+  "title": "meterdata",
+  "description": "A meter reading as received from input systems broken down to a single reading per record",
+  "type": "object",
+  "properties": {
+    "bucket": {
+      "type": "string",
+      "description": "The name of the bucket containing late arriving events",
+      "examples": [
+        "raw-data-bucket"
+      ]
+    },
+    "prefix": {
+      "type": "string",
+      "description": "The prefix of the written object",
+      "examples": [
+        "readings/json/year=2022/month=06/day=01/hour=02/object-containing-json-records"
+      ]
+    },
+    "late_partition_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The partition time the reading was taken, not the actual reading time",
+      "examples": [
+        "yyyy-MM-dd HH:mm:ss.SSS"
+      ]
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The event publishing time",
+      "examples": [
+        "yyyy-MM-dd HH:mm:ss.SSS"
+      ]
+    }
+  },
+  "required": [
+    "bucket",
+    "prefix",
+    "late_partition_time"
+  ]
+}
