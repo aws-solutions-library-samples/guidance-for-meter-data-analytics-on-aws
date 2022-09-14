@@ -5,6 +5,7 @@ taskcat_outputs
 *.iml
 .idea
 venv
+.venv
 
 **/.aws-sam/
 **/samconfig.toml
