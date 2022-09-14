@@ -27,12 +27,19 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  GlueDatabase:
+  GlueRawDatabase:
     Type: AWS::Glue::Database
     Properties:
-      CatalogId: !Ref "AWS::AccountId"
+      CatalogId: !Sub "${AWS::AccountId}-mda-raw"
       DatabaseInput:
-        Name: !Ref GlueDatabaseName
+        Name: !Sub "${GlueDatabaseName}_raw"
+
+  GlueIntegratedDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Sub "${AWS::AccountId}-mda-integrated"
+      DatabaseInput:
+        Name: !Sub "${GlueDatabaseName}_integrated"
 
 Parameters:
   GlueDatabaseName:
@@ -47,6 +54,9 @@ Outputs:
   IntegratedDataBucket:
     Value: !Ref IntegratedDataBucket
     Description: S3 Bucket that contains the integrated data.
-  GlueDatabase:
-    Value: !Ref GlueDatabase
-    Description: The central Glue Database
+  GlueRawDatabase:
+    Value: !Ref GlueRawDatabase
+    Description: The central Glue Raw Database
+  GlueIntegratedDatabase:
+    Value: !Ref GlueIntegratedDatabase
+    Description: The central Glue Prepared Database
