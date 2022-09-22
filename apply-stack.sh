@@ -4,7 +4,7 @@ set -e
 
 PARAMETER_FILE=${1:?parameter file name is not set}
 REGION=${2:-us-east-1}
-STACK_NAME=meter-data-lake
+STACK_NAME=meter-data-analytics
 
 echo "Checking if stack exists ..."
 

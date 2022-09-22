@@ -14,6 +14,9 @@ Resources:
         RestrictPublicBuckets: True
       VersioningConfiguration:
         Status: Enabled
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
 
   IntegratedDataBucket:
     Type: AWS::S3::Bucket
