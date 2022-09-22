@@ -7,7 +7,9 @@ Parameters:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueDatabase:
+  GlueRawDatabase:
+    Type: String
+  GlueIntegratedDatabase:
     Type: String
   MdaGlueScriptBucket:
     Type: String
@@ -33,7 +35,7 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueDatabase
+        --MDA_DATABASE: !Ref GlueRawDatabase
         --RAW_TABLE_NAME: meter_readings_raw_json
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
@@ -48,7 +50,7 @@ Resources:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueDatabase
+      DatabaseName: !Ref GlueRawDatabase
       TablePrefix: meter_readings_raw_
       Targets:
         S3Targets:
@@ -61,7 +63,7 @@ Resources:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueDatabase
+      DatabaseName: !Ref GlueIntegratedDatabase
       TablePrefix: meter_readings_integrated_
       Targets:
         S3Targets:
@@ -177,9 +179,10 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/meter_readings_raw_json"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/meter_readings_integrated_parquet"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/meter_readings_raw_json"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_parquet"
       Roles:
         - !Ref GlueJobRole
         - !Ref GlueCrawlerRole
