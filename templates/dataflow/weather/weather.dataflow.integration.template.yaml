@@ -1,15 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys the data cataloging workflow. (qs-1r18anahd)"
+Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
 
 Parameters:
   RawDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
-    Type: String
-  GlueIntegratedDatabase:
+  GlueDatabase:
     Type: String
   MdaGlueScriptBucket:
     Type: String
@@ -18,14 +16,14 @@ Resources:
   #
   # Glue Jobs
   #
-  IntegrateMeterReadingsGlueJob:
+  IntegrateWeatherDataGlueJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: integrate-meterreadings
+      Name: integrate-weatherdata
       Role: !GetAtt GlueJobRole.Arn
       Command:
         Name: "glueetl"
-        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/meterreadings-integration-job.py
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/weatherdata-integration-job.py
         PythonVersion: "3"
       DefaultArguments:
         --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
@@ -35,8 +33,8 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueRawDatabase
-        --RAW_TABLE_NAME: meter_readings_raw_json
+        --MDA_DATABASE: !Ref GlueDatabase
+        --RAW_TABLE_NAME: weather_data_raw_weather
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       ExecutionProperty:
@@ -46,28 +44,28 @@ Resources:
   #
   # Glue Crawlers
   #
-  RawDataBucketCrawler:
+  RawWeatherDataBucketCrawler:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueRawDatabase
-      TablePrefix: meter_readings_raw_
+      DatabaseName: !Ref GlueDatabase
+      TablePrefix: weather_data_raw_
       Targets:
         S3Targets:
-          - Path: !Sub "s3://${RawDataBucket}/readings/json"
+          - Path: !Sub "s3://${RawDataBucket}/weather/"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
 
-  IntegratedDataBucketCrawler:
+  IntegratedWeatherDataBucketCrawler:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueIntegratedDatabase
-      TablePrefix: meter_readings_integrated_
+      DatabaseName: !Ref GlueDatabase
+      TablePrefix: weather_data_integrated_
       Targets:
         S3Targets:
-          - Path: !Sub "s3://${IntegratedDataBucket}/readings/parquet"
+          - Path: !Sub "s3://${IntegratedDataBucket}/weather/"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -75,51 +73,93 @@ Resources:
   #
   # Glue Workflow
   #
-  MeterReadingGlueWorkflow:
+  WeatherGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
-      Description: Meterreading Glue workflow to move data from raw to integrated zone.
+      Description: Weather Data Glue workflow to move data from raw to integrated zone.
 
   GlueWorkflowTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Actions:
-        - CrawlerName: !Ref RawDataBucketCrawler
-      Type: ON_DEMAND
+        - CrawlerName: !Ref RawWeatherDataBucketCrawler
+      Type: EVENT
       Description: "A on demand trigger for the glue workflow."
-      WorkflowName: !Ref MeterReadingGlueWorkflow
+      WorkflowName: !Ref WeatherGlueWorkflow
 
   IntegrationJobTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref MeterReadingGlueWorkflow
+      WorkflowName: !Ref WeatherGlueWorkflow
       Actions:
-        - JobName: !Ref IntegrateMeterReadingsGlueJob
+        - JobName: !Ref IntegrateWeatherDataGlueJob
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
-            CrawlerName: !Ref RawDataBucketCrawler
+            CrawlerName: !Ref RawWeatherDataBucketCrawler
             CrawlState: "SUCCEEDED"
 
   IntegratedDataBucketCrawlerGlueTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Actions:
-        - CrawlerName: !Ref IntegratedDataBucketCrawler
+        - CrawlerName: !Ref IntegratedWeatherDataBucketCrawler
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref MeterReadingGlueWorkflow
+      WorkflowName: !Ref WeatherGlueWorkflow
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
-            JobName: !Ref IntegrateMeterReadingsGlueJob
+            JobName: !Ref IntegrateWeatherDataGlueJob
             State: "SUCCEEDED"
+
+  GlueWorkflowEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "EventRule"
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref RawDataBucket
+          object:
+            key:
+              - prefix: "weather/"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${WeatherGlueWorkflow}"
+          Id: "weather_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
 
   #
   # Iam Roles
   #
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  -  "glue:notifyEvent"
+                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${WeatherGlueWorkflow}"
   GlueCrawlerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -150,10 +190,10 @@ Resources:
               - "sts:AssumeRole"
       Path: "/"
 
-  S3MeterReadingBucketAccessPolicy:
+  S3WeatherDataBucketAccessPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: s3-glue-meterreading-bucket-policy
+      PolicyName: s3-glue-weatherdata-bucket-policy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -185,10 +225,9 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/meter_readings_raw_json"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_parquet"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/weather_data_raw_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/weather_data_integrated_*"
       Roles:
         - !Ref GlueJobRole
         - !Ref GlueCrawlerRole
