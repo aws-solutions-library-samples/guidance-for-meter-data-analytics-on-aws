@@ -84,6 +84,7 @@ Resources:
             import threading
             import boto3
             import cfnresponse
+            logging.getLogger().setLevel(logging.INFO)
             s3 = boto3.client('s3')
             s3_resource = boto3.resource('s3')
             def copy_objects(source_bucket, dest_bucket, prefix, dest_prefix, objects):
