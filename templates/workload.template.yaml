@@ -95,6 +95,7 @@ Resources:
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
         GlueDatabase: !GetAtt DataStorageStack.Outputs.GlueDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
