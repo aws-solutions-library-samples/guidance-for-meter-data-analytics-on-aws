@@ -5,6 +5,7 @@ import logging
 from botocore.exceptions import ClientError
 import os
 
+logging.getLogger().setLevel(logging.INFO)
 s3 = boto3.client("s3")
 
 

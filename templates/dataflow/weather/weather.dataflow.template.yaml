@@ -51,25 +51,6 @@ Parameters:
     Type: String
 
 Resources:
-  IngestionWeatherDataDataflowStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.ingestion.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub '${QSS3BucketName}-${AWS::Region}',
-              !Ref QSS3BucketName,
-            ]
-      Parameters:
-        RawDataBucket: !Ref RawDataBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-
   IntegrationWeatherDataDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
@@ -88,4 +69,24 @@ Resources:
         IntegratedDataBucket: !Ref IntegratedDataBucket
         GlueDatabase: !Ref GlueDatabase
         MdaGlueScriptBucket: !Ref MdaGlueScriptBucket
-        IntegrationEventBus: !Ref IntegrationEventBus
+
+  IngestionWeatherDataDataflowStack:
+    DependsOn: IntegrationWeatherDataDataflowStack # Integration needs to be deployed first, otherwise the initial data will not be caught by EventBridge
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.ingestion.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !Ref RawDataBucket
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+

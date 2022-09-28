@@ -11,8 +11,6 @@ Parameters:
     Type: String
   MdaGlueScriptBucket:
     Type: String
-  IntegrationEventBus:
-    Type: String
 
 Resources:
   #
@@ -120,7 +118,6 @@ Resources:
   GlueWorkflowEventRule:
     Type: AWS::Events::Rule
     Properties:
-      EventBusName: !Ref IntegrationEventBus
       Description: "Weather Glue Workflow Trigger"
       EventPattern:
         source:

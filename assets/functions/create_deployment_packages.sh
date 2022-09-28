@@ -27,6 +27,7 @@ functions=(
            "ml_pipeline/batch_anomaly_detection_v2" \
            "ml_pipeline/prepare_training_v2"  \
            "weather_load" \
+           "topology_transformer" \
            "ml_pipeline/check_initial_pipeline_run")
 
 for lambda_folder in ${functions[*]};
