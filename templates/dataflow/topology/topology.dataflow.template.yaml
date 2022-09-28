@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys the grid topology data dataflow. (qs-1r18anahd)"
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Parameters:
+
+  RawDataBucket:
+    Type: String
+  IntegratedDataBucket:
+    Type: String
+  GlueDatabase:
+    Type: String
+  MdaGlueScriptBucket:
+    Type: String
+  IntegrationEventBus:
+    Type: String
+    Default: "default"
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
+Resources:
+  IngestionTopologyDataDataflowStack:
+    DependsOn: IntegrationTopologyDataDataflowStack # Integration needs to be deployed first, otherwise the initial data will not be caught by EventBridge
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.ingestion.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !Ref RawDataBucket
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+
+  IntegrationTopologyDataDataflowStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.integration.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !Ref RawDataBucket
+        IntegratedDataBucket: !Ref IntegratedDataBucket
+        GlueDatabase: !Ref GlueDatabase
+        MdaGlueScriptBucket: !Ref MdaGlueScriptBucket
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
