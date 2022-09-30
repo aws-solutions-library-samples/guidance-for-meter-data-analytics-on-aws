@@ -1,0 +1,38 @@
+[
+  {
+    "id": "2EC053E8-A9EB-4D91-8DD3-53FCF0257C9F",
+    "distributionPointId": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "name": "Queen Anne Transformer",
+    "status": "online"
+  },
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "distributionPointId": "27ACB25D-B07E-4B82-8AD3-045BB358930A",
+    "name": "Downtown Transformer",
+    "status": "online"
+  },
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "distributionPointId": "55B3364B-68DB-4E49-8370-F002894873F2",
+    "name": "First Hill Transformer",
+    "status": "online"
+  },
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "distributionPointId": "14E36740-8333-4F66-815F-542FA572CC73",
+    "name": "Capital Hill Transformer",
+    "status": "online"
+  },
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "distributionPointId": "A803E769-2153-4235-8725-3B284130C5B4",
+    "name": "South Lake Union Transformer",
+    "status": "online"
+  },
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "distributionPointId": "2376F8AA-4007-4493-B0A2-75E7EF7F56CD",
+    "name": "Belltown Transformer",
+    "status": "online"
+  }
+]
