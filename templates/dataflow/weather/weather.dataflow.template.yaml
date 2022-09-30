@@ -11,7 +11,9 @@ Parameters:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueDatabase:
+  GlueRawDatabase:
+    Type: String
+  GlueIntegratedDatabase:
     Type: String
   MdaGlueScriptBucket:
     Type: String
@@ -67,7 +69,8 @@ Resources:
       Parameters:
         RawDataBucket: !Ref RawDataBucket
         IntegratedDataBucket: !Ref IntegratedDataBucket
-        GlueDatabase: !Ref GlueDatabase
+        GlueRawDatabase: !Ref GlueRawDatabase
+        GlueIntegratedDatabase: !Ref GlueIntegratedDatabase
         MdaGlueScriptBucket: !Ref MdaGlueScriptBucket
 
   IngestionWeatherDataDataflowStack:
