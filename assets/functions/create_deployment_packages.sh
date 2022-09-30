@@ -28,6 +28,8 @@ functions=(
            "ml_pipeline/prepare_training_v2"  \
            "weather_load" \
            "topology_transformer" \
+           "inbound_file_chunk_worker" \
+           "inbound_file_chunker" \
            "ml_pipeline/check_initial_pipeline_run")
 
 for lambda_folder in ${functions[*]};
