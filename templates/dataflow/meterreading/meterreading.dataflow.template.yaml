@@ -51,8 +51,6 @@ Parameters:
     Type: String
 
 Resources:
-  # MeterringDataflowInputAdapterStack
-
   IngestionMeterReadingDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
@@ -69,6 +67,25 @@ Resources:
       Parameters:
         RawDataBucket: !Ref RawDataBucket
         IntegrationBus: !Ref IntegrationBus
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+
+  MeterringDataflowInputAdapterStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.inputadapter.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.RawRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion

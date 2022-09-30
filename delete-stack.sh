@@ -4,7 +4,7 @@ set -e
 
 REGION=${1:-us-east-1}
 BUCKETS=`aws s3 ls`
-STACK_NAME=meter-data-lake
+STACK_NAME=meter-data-analytics
 
 for bucket in $BUCKETS
 do
