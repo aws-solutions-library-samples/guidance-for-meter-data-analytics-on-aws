@@ -45,7 +45,7 @@ Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Resources:
-  MeterreadingInboundDataBucket:
+  InboundDataBucket:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
@@ -60,33 +60,33 @@ Resources:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
 
-  InboundFileChunkInformationQueue:
+  InboundFileRangeQueue:
     Type: AWS::SQS::Queue
     Properties:
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt InboundFileChunkInformationDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt InboundFileRangeDeadLetterQueue.Arn
         maxReceiveCount: 5
 
-  InboundFileChunkInformationDeadLetterQueue:
+  InboundFileRangeDeadLetterQueue:
     Type: AWS::SQS::Queue
 
-  MeterreadingInboundFileChunker:
+  InboundFileRangeExtractor:
     Type: 'AWS::Serverless::Function'
-    Description: "Extract chunk information from the inbound file and send the data to SQS"
+    Description: "Extract range information from the inbound file and send the data to SQS"
     Properties:
       Handler: app.lambda_handler
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_chunker.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_extractor.zip'
       MemorySize: 512
       Timeout: 300
       Runtime: python3.9
-      Role: !GetAtt 'RunLambdaRole.Arn'
+      Role: !GetAtt 'RunRangeExtractorLambdaRole.Arn'
       Environment:
         Variables:
-          inbound_data_bucket: !Ref MeterreadingInboundDataBucket
-          chunk_queue_url: !Ref InboundFileChunkInformationQueue
+          inbound_data_bucket: !Ref InboundDataBucket
+          range_queue_url: !Ref InboundFileRangeQueue
       Events:
         InboundDataArrived:
           Type: EventBridgeRule
@@ -99,37 +99,37 @@ Resources:
               detail:
                 bucket:
                   name:
-                    - !Ref MeterreadingInboundDataBucket
+                    - !Ref InboundDataBucket
                 object:
                   key:
                     - prefix: "uncompressed/"
             Enabled: true
 
-  MeterreadingInboundFileChunkWorker:
+  InboundFileRangeWorker:
     Type: AWS::Serverless::Function
     Properties:
-      Description: "Function to extract reads from inbound file on given chunk size"
+      Description: "Function to extract reads from inbound file on given range"
       Handler: app.lambda_handler
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_chunk_worker.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_worker.zip'
       Runtime: python3.9
       MemorySize: 512
-      Role: !GetAtt RunChunkWorkerLambdaRole.Arn
+      Role: !GetAtt RunRangeWorkerLambdaRole.Arn
       Environment:
         Variables:
           raw_record_stream: !Ref RawRecordsStream
       Events:
-        InboundFileChunkInformationQueueEvent:
+        InboundFileRangeInformationQueueEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt InboundFileChunkInformationQueue.Arn
+            Queue: !GetAtt InboundFileRangeQueue.Arn
             BatchSize: 2
   #
   # IAM Roles
   #
-  RunLambdaRole:
+  RunRangeExtractorLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -152,8 +152,8 @@ Resources:
                   - "s3:PutObject"
                   - "s3:GetObject"
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
         - PolicyName: queue_write_policy
           PolicyDocument:
             Version: 2012-10-17
@@ -162,9 +162,9 @@ Resources:
                 Action:
                   - "sqs:SendMessage"
                 Resource:
-                  - !GetAtt InboundFileChunkInformationQueue.Arn
+                  - !GetAtt InboundFileRangeQueue.Arn
 
-  RunChunkWorkerLambdaRole:
+  RunRangeWorkerLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -186,8 +186,8 @@ Resources:
                 Action:
                   - "s3:GetObject"
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
         - PolicyName: queue_read_policy
           PolicyDocument:
             Version: 2012-10-17
@@ -198,7 +198,7 @@ Resources:
                   - "sqs:ReceiveMessage"
                   - "sqs:GetQueueAttributes"
                 Resource:
-                  - !GetAtt InboundFileChunkInformationQueue.Arn
+                  - !GetAtt InboundFileRangeQueue.Arn
         - PolicyName: stream_write_policy
           PolicyDocument:
             Version: 2012-10-17
@@ -219,12 +219,12 @@ Resources:
 
   CleanupInboundBucketsArtifacts:
     DependsOn:
-      - MeterreadingInboundDataBucket
+      - InboundDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt CleanupInboundBucketFunction.Arn
       Buckets:
-        - !Ref MeterreadingInboundDataBucket
+        - !Ref InboundDataBucket
 
   CleanupInboundBucketsRole:
     Type: AWS::IAM::Role
@@ -260,8 +260,8 @@ Resources:
                   - s3:DeleteObjectVersion
                   - s3:DeleteObject
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}/*'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${MeterreadingInboundDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
 
   CleanupInboundBucketFunction:
     Type: AWS::Lambda::Function
