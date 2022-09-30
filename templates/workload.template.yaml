@@ -77,51 +77,53 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
-#  WeatherDataflowStack:
-#    Type: 'AWS::CloudFormation::Stack'
-#    Properties:
-#      TemplateURL: !Sub
-#        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.template.yaml'
-#        - S3Region:
-#            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-#          S3Bucket:
-#            !If [
-#              UsingDefaultBucket,
-#              !Sub '${QSS3BucketName}-${AWS::Region}',
-#              !Ref QSS3BucketName,
-#            ]
-#      Parameters:
-#        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
-#        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-#        GlueDatabase: !GetAtt DataStorageStack.Outputs.GlueDatabase
-#        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-#        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
-#        QSS3BucketName: !Ref QSS3BucketName
-#        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-#        QSS3BucketRegion: !Ref QSS3BucketRegion
+  WeatherDataflowStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        GlueRawDatabase: !GetAtt DataStorageStack.Outputs.GlueRawDatabase
+        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 
-#  TopologyDataflowStack:
-#    Type: 'AWS::CloudFormation::Stack'
-#    Properties:
-#      TemplateURL: !Sub
-#        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.template.yaml'
-#        - S3Region:
-#            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-#          S3Bucket:
-#            !If [
-#              UsingDefaultBucket,
-#              !Sub '${QSS3BucketName}-${AWS::Region}',
-#              !Ref QSS3BucketName,
-#            ]
-#      Parameters:
-#        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
-#        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-#        GlueDatabase: !GetAtt DataStorageStack.Outputs.GlueDatabase
-#        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-#        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
-#        QSS3BucketName: !Ref QSS3BucketName
-#        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-#        QSS3BucketRegion: !Ref QSS3BucketRegion
+  TopologyDataflowStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        GlueRawDatabase: !GetAtt DataStorageStack.Outputs.GlueRawDatabase
+        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 
 
 Outputs:

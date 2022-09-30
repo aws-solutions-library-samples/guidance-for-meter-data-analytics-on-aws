@@ -7,7 +7,9 @@ Parameters:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueDatabase:
+  GlueRawDatabase:
+    Type: String
+  GlueIntegratedDatabase:
     Type: String
   MdaGlueScriptBucket:
     Type: String
@@ -142,7 +144,7 @@ Resources:
       Role: !GetAtt GlueCrawlerRole.Arn
       Classifiers:
         - !Ref JsonGridTopologyClassifier
-      DatabaseName: !Ref GlueDatabase
+      DatabaseName: !Ref GlueRawDatabase
       TablePrefix: topology_data_raw_
       Targets:
         S3Targets:
@@ -155,7 +157,7 @@ Resources:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueDatabase
+      DatabaseName: !Ref GlueIntegratedDatabase
       TablePrefix: topology_data_integrated_
       Targets:
         S3Targets:
@@ -286,9 +288,10 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/topology_data_raw_*"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/topology_data_integrated_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/topology_data_raw_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
       Roles:
         - !Ref GlueCrawlerRole
         - !Ref RunLambdaRole
