@@ -1,0 +1,327 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  Adapter to parse and process input meter data (qs-1r18anahd)
+
+Parameters:
+  RawRecordsStream:
+    Type: String
+
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Resources:
+  InboundDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  InboundFileRangeQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt InboundFileRangeDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  InboundFileRangeDeadLetterQueue:
+    Type: AWS::SQS::Queue
+
+  InboundFileRangeExtractor:
+    Type: 'AWS::Serverless::Function'
+    Description: "Extract range information from the inbound file and send the data to SQS"
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_extractor.zip'
+      MemorySize: 512
+      Timeout: 300
+      Runtime: python3.9
+      Role: !GetAtt 'RunRangeExtractorLambdaRole.Arn'
+      Environment:
+        Variables:
+          inbound_data_bucket: !Ref InboundDataBucket
+          range_queue_url: !Ref InboundFileRangeQueue
+      Events:
+        InboundDataArrived:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - "aws.s3"
+              detail-type:
+                - "Object Created"
+              detail:
+                bucket:
+                  name:
+                    - !Ref InboundDataBucket
+                object:
+                  key:
+                    - prefix: "uncompressed/"
+            Enabled: true
+
+  InboundFileRangeWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: "Function to extract reads from inbound file on given range"
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_worker.zip'
+      Runtime: python3.9
+      MemorySize: 512
+      Role: !GetAtt RunRangeWorkerLambdaRole.Arn
+      Environment:
+        Variables:
+          raw_record_stream: !Ref RawRecordsStream
+      Events:
+        InboundFileRangeInformationQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt InboundFileRangeQueue.Arn
+            BatchSize: 2
+  #
+  # IAM Roles
+  #
+  RunRangeExtractorLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: s3_readwrite_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+        - PolicyName: queue_write_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "sqs:SendMessage"
+                Resource:
+                  - !GetAtt InboundFileRangeQueue.Arn
+
+  RunRangeWorkerLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: s3_readwrite_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+        - PolicyName: queue_read_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "sqs:DeleteMessage"
+                  - "sqs:ReceiveMessage"
+                  - "sqs:GetQueueAttributes"
+                Resource:
+                  - !GetAtt InboundFileRangeQueue.Arn
+        - PolicyName: stream_write_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "kinesis:PutRecord"
+                  - "kinesis:PutRecords"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:stream/${RawRecordsStream}"
+
+
+
+  #
+  # Cleanup Scripts
+  # Empty Buckets and remove versions
+  #
+
+  CleanupInboundBucketsArtifacts:
+    DependsOn:
+      - InboundDataBucket
+    Type: Custom::CopyArtifacts
+    Properties:
+      ServiceToken: !GetAtt CleanupInboundBucketFunction.Arn
+      Buckets:
+        - !Ref InboundDataBucket
+
+  CleanupInboundBucketsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: lambda-cleanup-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjects
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAttributes
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - s3:GetBucketVersioning
+                  - s3:GetBucketVersion
+                  - s3:ListObjectVersionsing
+                  - s3:ListObjectVersions
+                  - s3:DeleteObjectVersion
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+
+  CleanupInboundBucketFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Cleans objects from S3 buckets (incl versions)
+      Handler: index.handler
+      Runtime: python3.9
+      Role: !GetAtt CleanupInboundBucketsRole.Arn
+      Timeout: 600
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+          logging.getLogger().setLevel(logging.INFO)
+          s3_resource = boto3.resource('s3')
+          def bucket_exists(bucket):
+              try:
+                  s3_resource.meta.client.head_bucket(Bucket=bucket)
+                  return True
+              except Exception as e:
+                  logging.info('Bucket {} does not exist'.format(bucket))
+                  return False
+          
+          def delete_objects(buckets):
+              for bucket in buckets:
+                  if(bucket_exists(bucket)):
+                      logging.info(f"Cleaning bucket: {bucket}")
+                      s3_bucket = s3_resource.Bucket(bucket)
+                      bucket_versioning = s3_resource.BucketVersioning(bucket)
+                      if bucket_versioning.status == 'Enabled':
+                        logging.info(f"Bucket [{bucket}] has versioning enabled, deleting all versions.")
+                        s3_bucket.object_versions.delete()
+                      else:
+                        s3_bucket.objects.all().delete()
+          
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          
+          def handler(event, context):
+              # make sure we send a failure to CloudFormation if the function
+              # is going to timeout
+              timer = threading.Timer((context.get_remaining_time_in_millis()
+                        / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+          
+              logging.info('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  buckets = event['ResourceProperties']['Buckets']
+                  logging.info(f"Following buckets will be cleaned: {buckets}")
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(buckets)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+
