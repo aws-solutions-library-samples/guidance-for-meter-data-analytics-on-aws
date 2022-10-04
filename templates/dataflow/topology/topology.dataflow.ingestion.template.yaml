@@ -3,7 +3,7 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys raw streaming ingestion pipeline for grid topology data. (qs-1r18anahd)"
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
 
   QSS3KeyPrefix:
@@ -52,7 +52,7 @@ Resources:
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt 'CopyGridTopologyFunction.Arn'
-      DestBucket: !Ref RawDataBucket
+      DestBucket: !Ref StagingDataBucket
       DestPrefix: 'topology/'
       SourceBucket: !Ref QSS3BucketName
       Prefix: !Sub '${QSS3KeyPrefix}showcase/data/grid_topology/'
@@ -93,8 +93,8 @@ Resources:
                   - s3:PutObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${RawDataBucket}/*'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${RawDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
               - Effect: Allow
                 Action:
                   - events:PutEvents

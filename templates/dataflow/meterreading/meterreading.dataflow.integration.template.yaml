@@ -3,11 +3,11 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys the data cataloging workflow. (qs-1r18anahd)"
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: String
   GlueIntegratedDatabase:
     Type: String
@@ -35,7 +35,7 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueRawDatabase
+        --MDA_DATABASE: !Ref GlueStagingDatabase
         --RAW_TABLE_NAME: meter_readings_raw_json
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
@@ -46,15 +46,15 @@ Resources:
   #
   # Glue Crawlers
   #
-  RawDataBucketCrawler:
+  StagingDataBucketCrawler:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueRawDatabase
+      DatabaseName: !Ref GlueStagingDatabase
       TablePrefix: meter_readings_raw_
       Targets:
         S3Targets:
-          - Path: !Sub "s3://${RawDataBucket}/readings/json"
+          - Path: !Sub "s3://${StagingDataBucket}/readings/json"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -84,7 +84,7 @@ Resources:
     Type: AWS::Glue::Trigger
     Properties:
       Actions:
-        - CrawlerName: !Ref RawDataBucketCrawler
+        - CrawlerName: !Ref StagingDataBucketCrawler
       Type: ON_DEMAND
       Description: "A on demand trigger for the glue workflow."
       WorkflowName: !Ref MeterReadingGlueWorkflow
@@ -100,7 +100,7 @@ Resources:
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
-            CrawlerName: !Ref RawDataBucketCrawler
+            CrawlerName: !Ref StagingDataBucketCrawler
             CrawlState: "SUCCEEDED"
 
   IntegratedDataBucketCrawlerGlueTrigger:
@@ -170,8 +170,8 @@ Resources:
               - 's3:ListBucket'
               - 's3:DeleteObject'
             Resource:
-              - !Sub "arn:aws:s3:::${RawDataBucket}"
-              - !Sub "arn:aws:s3:::${RawDataBucket}/*"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}/*"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
               - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
@@ -185,9 +185,9 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/meter_readings_raw_json"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/meter_readings_raw_json"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_parquet"
       Roles:
         - !Ref GlueJobRole

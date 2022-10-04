@@ -6,11 +6,11 @@ Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: String
   GlueIntegratedDatabase:
     Type: String
@@ -65,7 +65,7 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !Ref RawDataBucket
+        StagingDataBucket: !Ref StagingDataBucket
         IntegrationBus: !Ref IntegrationBus
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
@@ -105,8 +105,8 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !Ref RawDataBucket
+        StagingDataBucket: !Ref StagingDataBucket
         IntegratedDataBucket: !Ref IntegratedDataBucket
-        GlueRawDatabase: !Ref GlueRawDatabase
+        GlueStagingDatabase: !Ref GlueStagingDatabase
         GlueIntegratedDatabase: !Ref GlueIntegratedDatabase
         MdaGlueScriptBucket: !Ref MdaGlueScriptBucket

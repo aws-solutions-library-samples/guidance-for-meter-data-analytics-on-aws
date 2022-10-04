@@ -5,8 +5,9 @@ HOME=$(pwd)
 rm packages/*.zip
 
 functions=(
-           "adapter/mrasco"
-           "outage_info"
+           "adapter/csv/inbound_file_range_extractor" \
+           "adapter/csv/inbound_file_range_worker" \
+           "outage_info" \
            "meter_forecast" \
            "redshift/consumption" \
            "get_anomaly"  \
