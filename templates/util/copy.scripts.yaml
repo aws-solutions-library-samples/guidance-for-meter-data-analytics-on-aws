@@ -23,6 +23,7 @@ Resources:
         Prefix: !Sub '${QSS3KeyPrefix}assets/glue/scripts/'
         Objects:
           - meterreadings-integration-job.py
+          - weatherdata-integration-job.py
 
     CopyArtifactsRole:
       Type: AWS::IAM::Role
@@ -45,6 +46,7 @@ Resources:
                 - Effect: Allow
                   Action:
                     - s3:GetObject
+                    - s3:ListObjectVersions
                   Resource:
                     - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
                 - Effect: Allow
@@ -53,8 +55,16 @@ Resources:
                     - s3:DeleteObject
                     - s3:DeleteObjects
                     - s3:GetObject
+                    - s3:GetObjectVersion
                     - s3:GetObjectAttributes
                     - s3:ListBucket
+                    - s3:ListBucketVersions
+                    - s3:GetBucketVersioning
+                    - s3:GetBucketVersion
+                    - s3:ListObjectVersionsing
+                    - s3:ListObjectVersions
+                    - s3:DeleteObjectVersion
+                    - s3:DeleteObject
                   Resource:
                     - !Sub 'arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*'
                     - !Sub 'arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}'
@@ -74,7 +84,9 @@ Resources:
             import threading
             import boto3
             import cfnresponse
+            logging.getLogger().setLevel(logging.INFO)
             s3 = boto3.client('s3')
+            s3_resource = boto3.resource('s3')
             def copy_objects(source_bucket, dest_bucket, prefix, dest_prefix, objects):
                 for o in objects:
                     key = prefix + o
@@ -98,8 +110,16 @@ Resources:
                     return False
             def delete_objects(bucket, prefix, objects):
                 if(bucket_exists):
-                    objects = {'Objects': [{'Key': prefix + o} for o in objects]}
-                    s3.delete_objects(Bucket=bucket, Delete=objects)
+                    #objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+                    #s3.delete_objects(Bucket=bucket, Delete=objects)
+            
+                    s3_bucket = s3_resource.Bucket(bucket)
+                    bucket_versioning = s3_resource.BucketVersioning(bucket)
+                    if bucket_versioning.status == 'Enabled':
+                      s3_bucket.object_versions.delete()
+                    else:
+                      s3_bucket.objects.all().delete()
+            
             def timeout(event, context):
                 logging.error('Execution is about to time out, sending failure response to CloudFormation')
                 cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
