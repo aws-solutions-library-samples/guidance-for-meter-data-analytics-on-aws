@@ -3,11 +3,11 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: String
   GlueIntegratedDatabase:
     Type: String
@@ -68,7 +68,7 @@ Resources:
         - !Ref TopologyDependencyLayer
       Environment:
         Variables:
-          raw_data_bucket: !Ref RawDataBucket
+          raw_data_bucket: !Ref StagingDataBucket
           integrated_data_bucket: !Ref IntegratedDataBucket
 
   TopologyDependencyLayer:
@@ -144,11 +144,11 @@ Resources:
       Role: !GetAtt GlueCrawlerRole.Arn
       Classifiers:
         - !Ref JsonGridTopologyClassifier
-      DatabaseName: !Ref GlueRawDatabase
+      DatabaseName: !Ref GlueStagingDatabase
       TablePrefix: topology_data_raw_
       Targets:
         S3Targets:
-          - Path: !Sub "s3://${RawDataBucket}/topology/"
+          - Path: !Sub "s3://${StagingDataBucket}/topology/"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -273,8 +273,8 @@ Resources:
               - 's3:ListBucket'
               - 's3:DeleteObject'
             Resource:
-              - !Sub "arn:aws:s3:::${RawDataBucket}"
-              - !Sub "arn:aws:s3:::${RawDataBucket}/*"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}/*"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
               - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
@@ -288,9 +288,9 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/topology_data_raw_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_raw_*"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
       Roles:
         - !Ref GlueCrawlerRole

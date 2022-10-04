@@ -3,11 +3,11 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: String
   GlueIntegratedDatabase:
     Type: String
@@ -50,11 +50,11 @@ Resources:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueRawDatabase
+      DatabaseName: !Ref GlueStagingDatabase
       TablePrefix: weather_data_raw_
       Targets:
         S3Targets:
-          - Path: !Sub "s3://${RawDataBucket}/weather/"
+          - Path: !Sub "s3://${StagingDataBucket}/weather/"
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
         DeleteBehavior: "DEPRECATE_IN_DATABASE"
@@ -129,7 +129,7 @@ Resources:
         detail:
           bucket:
             name:
-              - !Ref RawDataBucket
+              - !Ref StagingDataBucket
           object:
             key:
               - prefix: "weather/"
@@ -212,8 +212,8 @@ Resources:
               - 's3:ListBucket'
               - 's3:DeleteObject'
             Resource:
-              - !Sub "arn:aws:s3:::${RawDataBucket}"
-              - !Sub "arn:aws:s3:::${RawDataBucket}/*"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}"
+              - !Sub "arn:aws:s3:::${StagingDataBucket}/*"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
               - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
               - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
@@ -227,9 +227,9 @@ Resources:
               - 'glue:BatchUpdatePartition'
             Resource:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueRawDatabase}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueRawDatabase}/weather_data_raw_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_raw_*"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/weather_data_integrated_*"
       Roles:
         - !Ref GlueJobRole
