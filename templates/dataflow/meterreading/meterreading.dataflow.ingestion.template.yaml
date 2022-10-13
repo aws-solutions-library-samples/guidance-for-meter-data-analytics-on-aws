@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+Description: "Deploys staging streaming ingestion pipeline. (qs-1r18anahd)"
 
 Parameters:
   StagingDataBucket:
@@ -43,22 +43,22 @@ Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 
 Resources:
-  RawRecordsStream:
+  StagingRecordsStream:
     Type: AWS::Kinesis::Stream
     Properties:
-      Name: RawRecordsStream
+      Name: StagingRecordsStream
       RetentionPeriodHours: 168
       StreamModeDetails:
         StreamMode: ON_DEMAND
 
-  RawEventsFirehose:
+  StagingEventsFirehose:
     DependsOn: DeliveryPolicy
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
-      DeliveryStreamName: RawRecordsDeliveryStream
+      DeliveryStreamName: StagingRecordsDeliveryStream
       DeliveryStreamType: KinesisStreamAsSource
       KinesisStreamSourceConfiguration:
-        KinesisStreamARN: !GetAtt RawRecordsStream.Arn
+        KinesisStreamARN: !GetAtt StagingRecordsStream.Arn
         RoleARN: !GetAtt DeliveryRole.Arn
 
       ExtendedS3DestinationConfiguration:
@@ -98,19 +98,19 @@ Resources:
           RoleARN: !GetAtt DeliveryRole.Arn
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: !Ref RawEventsFirehoseLogGroup
-          LogStreamName: !Ref RawEventsFirehoseLogStream
+          LogGroupName: !Ref StagingEventsFirehoseLogGroup
+          LogStreamName: !Ref StagingEventsFirehoseLogStream
 
-  RawEventsFirehoseLogGroup:
+  StagingEventsFirehoseLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
-      LogGroupName: "/aws/meter_readings/raw_events_firehouse"
+      LogGroupName: "/aws/meter_readings/staging_events_firehouse"
 
-  RawEventsFirehoseLogStream:
+  StagingEventsFirehoseLogStream:
     Type: AWS::Logs::LogStream
     Properties:
-      LogGroupName: !Ref RawEventsFirehoseLogGroup
+      LogGroupName: !Ref StagingEventsFirehoseLogGroup
 
   DeliveryRole:
     Type: AWS::IAM::Role
@@ -149,7 +149,7 @@ Resources:
               - 'kinesis:DescribeStream'
               - 'kinesis:GetShardIterator'
               - 'kinesis:GetRecords'
-            Resource: !GetAtt RawRecordsStream.Arn
+            Resource: !GetAtt StagingRecordsStream.Arn
       Roles:
         - !Ref DeliveryRole
 
@@ -235,7 +235,6 @@ Resources:
       Targets:
         - Arn: !GetAtt LateArrivingNotificationLambdaFunction.Arn
           Id: "late_arriving_data_trigger"
-          RoleArn: !GetAtt EventBridgeRole.Arn
 
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
@@ -259,6 +258,6 @@ Resources:
                 Resource: !GetAtt LateArrivingNotificationLambdaFunction.Arn
 
 Outputs:
-  RawRecordsStream:
-    Value: !Ref RawRecordsStream
-    Description: Name of the raw record kinesis stream.
+  StagingRecordsStream:
+    Value: !Ref StagingRecordsStream
+    Description: Name of the staging record kinesis stream.

@@ -46,12 +46,12 @@ Resources:
   #
   # Glue Crawlers
   #
-  RawWeatherDataBucketCrawler:
+  StagingWeatherDataBucketCrawler:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueStagingDatabase
-      TablePrefix: weather_data_raw_
+      TablePrefix: weather_data_staging_
       Targets:
         S3Targets:
           - Path: !Sub "s3://${StagingDataBucket}/weather/"
@@ -78,13 +78,13 @@ Resources:
   WeatherGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
-      Description: Weather Data Glue workflow to move data from raw to integrated zone.
+      Description: Weather Data Glue workflow to move data from staging to integrated zone.
 
   GlueWorkflowTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Actions:
-        - CrawlerName: !Ref RawWeatherDataBucketCrawler
+        - CrawlerName: !Ref StagingWeatherDataBucketCrawler
       Type: EVENT
       Description: "A on demand trigger for the glue workflow."
       WorkflowName: !Ref WeatherGlueWorkflow
@@ -100,7 +100,7 @@ Resources:
       Predicate:
         Conditions:
           - LogicalOperator: "EQUALS"
-            CrawlerName: !Ref RawWeatherDataBucketCrawler
+            CrawlerName: !Ref StagingWeatherDataBucketCrawler
             CrawlState: "SUCCEEDED"
 
   IntegratedDataBucketCrawlerGlueTrigger:
@@ -229,7 +229,7 @@ Resources:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_raw_*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_staging_*"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/weather_data_integrated_*"
       Roles:
         - !Ref GlueJobRole

@@ -4,7 +4,7 @@ Description: >-
   Adapter to parse and process input meter data (qs-1r18anahd)
 
 Parameters:
-  RawRecordsStream:
+  StagingRecordsStream:
     Type: String
 
   QSS3KeyPrefix:
@@ -119,7 +119,7 @@ Resources:
       Role: !GetAtt RunRangeWorkerLambdaRole.Arn
       Environment:
         Variables:
-          raw_record_stream: !Ref RawRecordsStream
+          staging_record_stream: !Ref StagingRecordsStream
       Events:
         InboundFileRangeInformationQueueEvent:
           Type: SQS
@@ -208,7 +208,7 @@ Resources:
                   - "kinesis:PutRecord"
                   - "kinesis:PutRecords"
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:stream/${RawRecordsStream}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:stream/${StagingRecordsStream}"
 
 
 
