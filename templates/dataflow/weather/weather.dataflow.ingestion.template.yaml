@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline for weather data. (qs-1r18anahd)"
+Description: "Deploys staging ingestion pipeline for weather data. (qs-1r18anahd)"
 
 Parameters:
   StagingDataBucket:
@@ -111,7 +111,7 @@ Resources:
         - !Ref DependencyLayer
       Environment:
         Variables:
-          raw_data_bucket: !Ref StagingDataBucket
+          staging_data_bucket: !Ref StagingDataBucket
       Events:
         Schedule:
           Type: Schedule

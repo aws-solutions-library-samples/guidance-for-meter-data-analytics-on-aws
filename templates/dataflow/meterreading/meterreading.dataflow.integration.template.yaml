@@ -36,7 +36,7 @@ Resources:
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
         --MDA_DATABASE: !Ref GlueStagingDatabase
-        --RAW_TABLE_NAME: meter_readings_raw_json
+        --STAGING_TABLE_NAME: meter_readings_staging_json
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       ExecutionProperty:
@@ -51,7 +51,7 @@ Resources:
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueStagingDatabase
-      TablePrefix: meter_readings_raw_
+      TablePrefix: meter_readings_staging_
       Targets:
         S3Targets:
           - Path: !Sub "s3://${StagingDataBucket}/readings/json"
@@ -78,7 +78,7 @@ Resources:
   MeterReadingGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
-      Description: Meterreading Glue workflow to move data from raw to integrated zone.
+      Description: Meterreading Glue workflow to move data from staging to integrated zone.
 
   GlueWorkflowTrigger:
     Type: AWS::Glue::Trigger
@@ -187,7 +187,7 @@ Resources:
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/meter_readings_raw_json"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/meter_readings_staging_json"
               - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_parquet"
       Roles:
         - !Ref GlueJobRole

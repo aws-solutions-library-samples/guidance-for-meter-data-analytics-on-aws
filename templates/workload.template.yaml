@@ -131,7 +131,7 @@ Outputs:
     Description: 'Stack name'
     Value: !Sub '${AWS::StackName}'
   StagingDataBucket:
-    Description: S3 Bucket that contains the raw data.
+    Description: S3 Bucket that contains the staging data.
     Value: !GetAtt DataStorageStack.Outputs.StagingDataBucket
   IntegratedDataBucket:
     Description: S3 Bucket that contains the integrated data.

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+Description: "Deploys data common storage infrastructure. (qs-1r18anahd)"
 
 Resources:
   StagingDataBucket:
@@ -170,13 +170,13 @@ Parameters:
 Outputs:
   StagingDataBucket:
     Value: !Ref StagingDataBucket
-    Description: S3 Bucket that contains the raw data.
+    Description: S3 Bucket that contains the staging data.
   IntegratedDataBucket:
     Value: !Ref IntegratedDataBucket
     Description: S3 Bucket that contains the integrated data.
   GlueStagingDatabase:
     Value: !Ref GlueStagingDatabase
-    Description: The central Glue Raw Database
+    Description: The central Glue Staging Database
   GlueIntegratedDatabase:
     Value: !Ref GlueIntegratedDatabase
     Description: The central Glue Prepared Database

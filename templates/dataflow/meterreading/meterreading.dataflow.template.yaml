@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+Description: "Deploys meter reading pipelines. (qs-1r18anahd)"
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
@@ -85,7 +85,7 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.RawRecordsStream
+        StagingRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.StagingRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
