@@ -6,6 +6,14 @@ Description: >-
 Parameters:
   StagingRecordsStream:
     Type: String
+  SuggestedNumberOfWorkers:
+    Type: Number
+    Default: 8
+    MinValue: 1
+    MaxValue: 100
+  Adapter:
+    Type: String
+    Default: adapter_csv
 
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
@@ -59,6 +67,15 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: "GlacierRule"
+            Prefix: "/"
+            Status: Enabled
+            ExpirationInDays: 90
+            Transitions:
+              - TransitionInDays: 1
+                StorageClass: GLACIER
 
   InboundFileRangeQueue:
     Type: AWS::SQS::Queue
@@ -78,15 +95,15 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_extractor.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/${Adapter}_inbound_file_range_extractor.zip'
       MemorySize: 512
       Timeout: 300
       Runtime: python3.9
       Role: !GetAtt 'RunRangeExtractorLambdaRole.Arn'
       Environment:
         Variables:
-          inbound_data_bucket: !Ref InboundDataBucket
           range_queue_url: !Ref InboundFileRangeQueue
+          suggested_workers: !Ref SuggestedNumberOfWorkers
       Events:
         InboundDataArrived:
           Type: EventBridgeRule
@@ -113,9 +130,10 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/inbound_file_range_worker.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/${Adapter}_inbound_file_range_worker.zip'
       Runtime: python3.9
       MemorySize: 512
+      Timeout: 720
       Role: !GetAtt RunRangeWorkerLambdaRole.Arn
       Environment:
         Variables:
@@ -208,7 +226,7 @@ Resources:
                   - "kinesis:PutRecord"
                   - "kinesis:PutRecords"
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:stream/${StagingRecordsStream}"
+                  - !Sub "arn:${AWS::Partition}:kinesis:${AWS::Region}:${AWS::AccountId}:stream/${StagingRecordsStream}"
 
 
 
