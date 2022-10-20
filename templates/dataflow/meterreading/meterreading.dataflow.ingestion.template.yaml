@@ -67,7 +67,7 @@ Resources:
           IntervalInSeconds: '60'
           SizeInMBs: '100'
         CompressionFormat: UNCOMPRESSED
-        ErrorOutputPrefix: "errors/json/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}"
+        ErrorOutputPrefix: "errors/readings/json/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}"
         Prefix: "readings/json/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/hour=!{partitionKeyFromQuery:hour}/"
         DynamicPartitioningConfiguration:
           Enabled: true
@@ -153,7 +153,7 @@ Resources:
       Roles:
         - !Ref DeliveryRole
 
-  LateArrivingNotificationLambdaFunction:
+  LateArrivingEventsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri:
@@ -171,11 +171,28 @@ Resources:
           - Arn
       Runtime: python3.9
       Timeout: 30
+      Events:
+        Late:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - "aws.s3"
+              detail-type:
+                - "Object Created"
+              detail:
+                bucket:
+                  name:
+                    - !Ref StagingDataBucket
+                object:
+                  key:
+                    - prefix: "readings/json/"
+            Enabled: true
 
   LambdaInvokePermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !GetAtt LateArrivingNotificationLambdaFunction.Arn
+      FunctionName: !GetAtt LateArrivingEventsFunction.Arn
       Action: 'lambda:InvokeFunction'
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
@@ -215,27 +232,6 @@ Resources:
                   - 'events:PutEvents'
                 Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${IntegrationBus}'
 
-  InvokeLateArrivingDataEventRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: "Late Arriving Data Lambda Trigger"
-      EventPattern:
-        source:
-          - "aws.s3"
-        detail-type:
-          - "Object Created"
-        detail:
-          bucket:
-            name:
-              - !Ref StagingDataBucket
-          object:
-            key:
-              - prefix: "readings/json/"
-      State: "ENABLED"
-      Targets:
-        - Arn: !GetAtt LateArrivingNotificationLambdaFunction.Arn
-          Id: "late_arriving_data_trigger"
-
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -255,7 +251,7 @@ Resources:
               - Effect: Allow
                 Action:
                   -  "lambda:InvokeFunction"
-                Resource: !GetAtt LateArrivingNotificationLambdaFunction.Arn
+                Resource: !GetAtt LateArrivingEventsFunction.Arn
 
 Outputs:
   StagingRecordsStream:
