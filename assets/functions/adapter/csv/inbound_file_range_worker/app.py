@@ -15,7 +15,6 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import base64
 import boto3
 import json
 import os
@@ -113,12 +112,14 @@ def write_kinesis(stream_name, records):
     for kinesis_batch in kinesis_batches:
         kinesis_records = list(map(
             lambda reading:{
-                'Data': base64.b64encode(json.dumps(reading).encode('utf-8')),
+                'Data': encode_data(reading),
                 'PartitionKey': reading['meter_id']
             }, kinesis_batch))
         failed_records_count = kinesis_put_records(kinesis_records, stream_name)
     return failed_records_count
 
+def encode_data(data):
+    return json.dumps(data).encode('utf-8')
 
 def kinesis_put_records(kinesis_records, stream_name, attempt=0):
     result = {}

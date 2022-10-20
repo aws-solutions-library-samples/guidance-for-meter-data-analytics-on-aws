@@ -80,6 +80,7 @@ Resources:
   InboundFileRangeQueue:
     Type: AWS::SQS::Queue
     Properties:
+      VisibilityTimeout: 900
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt InboundFileRangeDeadLetterQueue.Arn
         maxReceiveCount: 5
