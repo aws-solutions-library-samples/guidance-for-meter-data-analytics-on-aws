@@ -19,77 +19,71 @@ import boto3
 import json
 import urllib.parse
 import uuid
+import os
 
-destination_queue = os.environ['TargetSQSQueue']
-chunk_size = os.environ['ChunkSize']
+from datetime import datetime
 
-s3 = boto3.client('s3')
-sqs = boto3.resource('sqs')
+destination_queue = os.environ['range_queue_url']
+suggested_workers = int(os.environ['suggested_workers'])
+
+sqs = boto3.client('sqs')
 
 def lambda_handler(event, context):
     total_chunks = 0
+    event_time = event['time'].replace('T', ' ').replace('Z', '')
     try:
-        for record in event['Records']:
-            bucket = record['s3']['bucket']['name']
-            key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
+        bucket = event['detail']['bucket']['name']
+        key = urllib.parse.unquote_plus(event['detail']['object']['key'], encoding='utf-8')
 
-            file_size = get_object_size(bucket, key)
+        file_size = int(event['detail']['object']['size'])
+        chunk_size = int(file_size/suggested_workers)
 
-            chunks = []
-            start_range_bytes = 0
-            end_range_bytes = min(chunk_size, file_size)
-            while start_range_bytes < file_size:
-                chunks.append({
-                    "bucket": bucket,
-                    "prefix": key,
-                    "start-range-bytes": start_range_bytes,
-                    "end-range-bytes": end_range_bytes,
-                    "arrive_time": record["eventTime"]
-                })
-                start_range_bytes = end_range_bytes
-                end_range_bytes = end_range_bytes + min(chunk_size, file_size - end_range_bytes)
+        chunks = []
+        start_range_bytes = 0
+        end_range_bytes = min(chunk_size, file_size)
+        while start_range_bytes < file_size:
+            chunks.append({
+                "bucket": bucket,
+                "prefix": key,
+                "start-range-bytes": start_range_bytes,
+                "end-range-bytes": end_range_bytes,
+                "arrive_time": event_time
+            })
+            start_range_bytes = end_range_bytes
+            end_range_bytes = end_range_bytes + min(chunk_size, file_size - end_range_bytes)
 
-            if not chunks:
-                chunks.append({
-                    "bucket": bucket,
-                    "prefix": key
-                })
+        if not chunks:
+            chunks.append({
+                "bucket": bucket,
+                "prefix": key,
+                "start-range-bytes": 0,
+                "end-range-bytes": event['detail']['object']['size'],
+                "arrive_time": event_time
+            })
 
-            write_sqs(chunks)
-            total_chunks = total_chunks + len(chunks)
+        write_sqs(chunks)
 
         return {
             "statusCode": 200,
             "body": {
-                "objects": str(len(event['Records'])),
                 "chunk_size": str(chunk_size),
-                "number_of_chuncks": str(len(total_chunks)),
+                "number_of_chuncks": len(chunks),
+                "chuncks": chunks
             }
         }
 
     except Exception as e:
         print(e)
-        print('Error with event object {} from bucket {}.'.format(key, bucket))
+        print('Error with event object {}.'.format(json.dumps(event)))
         raise e
 
-def get_object_size(bucket, key):
-    size = 0
-    object_head_response = s3.head_object(Bucket=bucket, Key=key)
-    if object_head_response:
-        size = int(object_head_response['ResponseMetadata']['HTTPHeaders']['content-length'])
-    return size
 
 def write_sqs(chunks_list):
-    queue = sqs.get_queue_by_name(QueueName=destination_queue)
     max_batch_size = 10 #current maximum allowed
     queue_batches = [chunks_list[x:x + max_batch_size] for x in range(0, len(chunks_list), max_batch_size)]
-    message_group_id = str(uuid.uuid4())
+    print('Queue batches len {}.'.format(len(queue_batches)))
 
     for queue_batch in queue_batches:
-        entries = []
-        for x in queue_batch:
-            entry = {'Id': str(uuid.uuid4()),
-                     'MessageBody': json.dumps(x),
-                     'MessageGroupId': message_group_id}
-            entries.append(entry)
-        queue.send_messages(Entries=entries)
+        entries = list(map(lambda queue_message: {'Id': str(uuid.uuid4()), 'MessageBody': json.dumps(queue_message)}, queue_batch))
+        result = sqs.send_message_batch(QueueUrl=destination_queue,Entries=entries)
+        print('Queue sending response {}.'.format(json.dumps(result)))
