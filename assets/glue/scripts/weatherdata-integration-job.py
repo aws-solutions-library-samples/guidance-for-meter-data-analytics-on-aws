@@ -8,7 +8,7 @@ import pandas as pd
 from pyspark.sql.functions import *
 from awsglue.dynamicframe import DynamicFrame
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE", "RAW_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE", "STAGING_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
@@ -23,7 +23,7 @@ def parse_date(df):
 # Script generated for node S3 bucket
 S3bucket_node1 = glueContext.create_dynamic_frame.from_catalog(
     database=args["MDA_DATABASE"],
-    table_name=args["RAW_TABLE_NAME"],
+    table_name=args["STAGING_TABLE_NAME"],
     transformation_ctx="S3bucket_node1",
 )
 
