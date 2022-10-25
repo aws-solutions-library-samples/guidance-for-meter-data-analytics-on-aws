@@ -60,9 +60,9 @@ def extract_value(string_with_values, param):
 def lambda_handler(event, context):
     now = datetime.now()
     result = {'late_arriving': []}
-    for record in event['Records']:
-        bucket = record['s3']['bucket']['name']
-        key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
+    try:
+        bucket = event['detail']['bucket']['name']
+        key = urllib.parse.unquote_plus(event['detail']['object']['key'], encoding='utf-8')
         logger.info("found event for s3://{}/{}".format(bucket, key))
 
         date_time_str = extract_value(key, "day") + "/" + extract_value(key, "month") + "/" + extract_value(key, "year") \
@@ -77,7 +77,6 @@ def lambda_handler(event, context):
                 'event_time': now.strftime("%m/%d/%Y, %H:%M:%S.%f")[:-3]
             })
 
-    try:
         entries = list(map(lambda r: to_entry(r), result['late_arriving']))
         logger.info("pushing entries {}".format(json.dumps(entries)))
 

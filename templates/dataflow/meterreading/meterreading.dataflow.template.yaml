@@ -1,16 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+Description: "Deploys meter reading pipelines. (qs-1r18anahd)"
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Parameters:
-  RawDataBucket:
+  StagingDataBucket:
     Type: String
   IntegratedDataBucket:
     Type: String
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: String
   GlueIntegratedDatabase:
     Type: String
@@ -65,7 +65,7 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !Ref RawDataBucket
+        StagingDataBucket: !Ref StagingDataBucket
         IntegrationBus: !Ref IntegrationBus
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
@@ -85,7 +85,7 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.RawRecordsStream
+        StagingRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.StagingRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -105,8 +105,8 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !Ref RawDataBucket
+        StagingDataBucket: !Ref StagingDataBucket
         IntegratedDataBucket: !Ref IntegratedDataBucket
-        GlueRawDatabase: !Ref GlueRawDatabase
+        GlueStagingDatabase: !Ref GlueStagingDatabase
         GlueIntegratedDatabase: !Ref GlueIntegratedDatabase
         MdaGlueScriptBucket: !Ref MdaGlueScriptBucket

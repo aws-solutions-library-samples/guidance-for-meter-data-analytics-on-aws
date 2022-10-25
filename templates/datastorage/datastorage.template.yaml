@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys raw streaming ingestion pipeline. (qs-1r18anahd)"
+Description: "Deploys data common storage infrastructure. (qs-1r18anahd)"
 
 Resources:
-  RawDataBucket:
+  StagingDataBucket:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
@@ -30,12 +30,12 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  GlueRawDatabase:
+  GlueStagingDatabase:
     Type: AWS::Glue::Database
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
-        Name: !Sub "${GlueDatabaseName}_raw"
+        Name: !Sub "${GlueDatabaseName}_staging"
 
   GlueIntegratedDatabase:
     Type: AWS::Glue::Database
@@ -51,13 +51,13 @@ Resources:
 
   CleanupBucketsArtifacts:
     DependsOn:
-      - RawDataBucket
+      - StagingDataBucket
       - IntegratedDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt 'CleanupBucketFunction.Arn'
       Buckets:
-        - !Ref RawDataBucket
+        - !Ref StagingDataBucket
         - !Ref IntegratedDataBucket
 
   CleanupBucketsRole:
@@ -94,8 +94,8 @@ Resources:
                   - s3:DeleteObjectVersion
                   - s3:DeleteObject
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${RawDataBucket}/*'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${RawDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
 
@@ -161,7 +161,6 @@ Resources:
                   timer.cancel()
                   cfnresponse.send(event, context, status, {}, None)
 
-
 Parameters:
   GlueDatabaseName:
     Type: String
@@ -169,15 +168,15 @@ Parameters:
     Description: "Name of the central Glue database."
 
 Outputs:
-  RawDataBucket:
-    Value: !Ref RawDataBucket
-    Description: S3 Bucket that contains the raw data.
+  StagingDataBucket:
+    Value: !Ref StagingDataBucket
+    Description: S3 Bucket that contains the staging data.
   IntegratedDataBucket:
     Value: !Ref IntegratedDataBucket
     Description: S3 Bucket that contains the integrated data.
-  GlueRawDatabase:
-    Value: !Ref GlueRawDatabase
-    Description: The central Glue Raw Database
+  GlueStagingDatabase:
+    Value: !Ref GlueStagingDatabase
+    Description: The central Glue Staging Database
   GlueIntegratedDatabase:
     Value: !Ref GlueIntegratedDatabase
     Description: The central Glue Prepared Database

@@ -67,9 +67,9 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueRawDatabase: !GetAtt DataStorageStack.Outputs.GlueRawDatabase
+        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
         IntegrationBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
@@ -91,9 +91,9 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueRawDatabase: !GetAtt DataStorageStack.Outputs.GlueRawDatabase
+        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
         IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
@@ -115,9 +115,9 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
-        RawDataBucket: !GetAtt DataStorageStack.Outputs.RawDataBucket
+        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueRawDatabase: !GetAtt DataStorageStack.Outputs.GlueRawDatabase
+        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
         IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
@@ -130,9 +130,9 @@ Outputs:
   StackName:
     Description: 'Stack name'
     Value: !Sub '${AWS::StackName}'
-  RawDataBucket:
-    Description: S3 Bucket that contains the raw data.
-    Value: !GetAtt DataStorageStack.Outputs.RawDataBucket
+  StagingDataBucket:
+    Description: S3 Bucket that contains the staging data.
+    Value: !GetAtt DataStorageStack.Outputs.StagingDataBucket
   IntegratedDataBucket:
     Description: S3 Bucket that contains the integrated data.
     Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
