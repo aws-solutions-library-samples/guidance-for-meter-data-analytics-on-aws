@@ -18,6 +18,7 @@ DataCatalogtable_node1 = glueContext.create_dynamic_frame.from_catalog(
     database=args["MDA_DATABASE"],
     table_name=args["STAGING_TABLE_NAME"],
     transformation_ctx="DataCatalogtable_node1",
+    additional_options = {'useS3ListImplementation': True}
 )
 
 # Script generated for node ApplyMapping

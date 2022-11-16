@@ -21,21 +21,19 @@ import urllib.parse
 import uuid
 import os
 
-from datetime import datetime
-
 destination_queue = os.environ['range_queue_url']
-suggested_workers = int(os.environ['suggested_workers'])
+worker_memory = int(os.environ['worker_memory'])
 
 sqs = boto3.client('sqs')
 
 def lambda_handler(event, context):
-    total_chunks = 0
     event_time = event['time'].replace('T', ' ').replace('Z', '')
     try:
         bucket = event['detail']['bucket']['name']
         key = urllib.parse.unquote_plus(event['detail']['object']['key'], encoding='utf-8')
 
         file_size = int(event['detail']['object']['size'])
+        suggested_workers = file_size / worker_memory * 2
         chunk_size = int(file_size/suggested_workers)
 
         chunks = []
@@ -62,6 +60,7 @@ def lambda_handler(event, context):
             })
 
         write_sqs(chunks)
+        print("chunks to process", json.dumps(chunks))
 
         return {
             "statusCode": 200,
