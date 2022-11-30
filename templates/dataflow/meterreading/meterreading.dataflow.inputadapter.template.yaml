@@ -121,6 +121,7 @@ Resources:
           range_queue_url: !Ref InboundFileRangeQueue
           worker_memory: !Ref WorkerMemorySize
           max_workers: !Ref MaxNumberOfWorkers
+          suggested_workers: !Ref SuggestedRangesPerWorker
       Events:
         InboundDataArrived:
           Type: EventBridgeRule
