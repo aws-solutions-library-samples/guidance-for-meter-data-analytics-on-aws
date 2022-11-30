@@ -5,6 +5,11 @@ Description: "Deploys meter reading pipelines. (qs-1r18anahd)"
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
+
+Outputs:
+  InboundDataBucket:
+    Value: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundDataBucket
+
 Parameters:
   StagingDataBucket:
     Type: String

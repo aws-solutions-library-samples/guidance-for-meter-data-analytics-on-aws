@@ -22,6 +22,24 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
+  MeterDataGenerator:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/templates/workload.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/'
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+
   IntegrationStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
@@ -35,9 +53,6 @@ Resources:
               !Sub '${QSS3BucketName}-${AWS::Region}',
               !Ref QSS3BucketName,
             ]
-      Parameters:
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
   DataStorageStack:
     Type: 'AWS::CloudFormation::Stack'
@@ -76,6 +91,29 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
+
+  HesAdapterStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/hes.adapter.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [
+              UsingDefaultBucket,
+              !Sub '${QSS3BucketName}-${AWS::Region}',
+              !Ref QSS3BucketName,
+            ]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+        SFTPServerAddress: !GetAtt MeterDataGenerator.Outputs.SftpServerAddress
+        SFTPUserName: !GetAtt MeterDataGenerator.Outputs.SftpUserName
+        SFTPSecretARN: !GetAtt MeterDataGenerator.Outputs.SecretARN
+        ReadingsFileBaseURL: !GetAtt MeterDataGenerator.Outputs.apiGatewayInvokeURL
+        InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
 
   WeatherDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
