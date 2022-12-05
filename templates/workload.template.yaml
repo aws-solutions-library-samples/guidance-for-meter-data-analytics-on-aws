@@ -176,23 +176,6 @@ Outputs:
     Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
-  Subnet1ID:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet 1 ID to create the Amazon Redshift cluster.
-  
-  Subnet2ID:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet 2 ID to create the Amazon Redshift cluster.
-
-  VPCID:
-    Type: AWS::EC2::VPC::Id
-    Description: VPC ID to create the Amazon Redshift cluster.
-  
-  RemoteAccessCIDR:
-    Type: String
-    Default: 0.0.0.0/0
-    Description: CIDR block from which access to the Amazon Redshift cluster is allowed.
-
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription:
@@ -242,27 +225,12 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Network configuration
-        Parameters:
-          - VPCID
-          - Subnet1ID
-          - Subnet2ID
-          - RemoteAccessCIDR
-      - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
           - QSS3BucketRegion
     ParameterLabels:
-      Subnet1ID:
-        default: Subnet 1 ID
-      Subnet2ID:
-        default: Subnet 2 ID
-      VPCID:
-        default: VPC ID
-      RemoteAccessCIDR:
-        default: Remote access CIDR block
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
