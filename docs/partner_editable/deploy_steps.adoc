@@ -25,11 +25,12 @@ NOTE: You are responsible for the cost of the AWS services used while running th
 
 . Sign in to your AWS account, and choose one of the following options to launch the AWS CloudFormation template. For help with choosing an option, see link:#_deployment_options[Deployment options] earlier in this guide.
 
-[cols=",]
-|===
-|https://fwd.aws/5Pj8e[Deploy {partner-product-name} into a new VPC on AWS^] 
-|https://fwd.aws/zejvg[Deploy {partner-product-name} into an existing VPC on AWS^]
-|===
+.Deployment Options
+****
+https://fwd.aws/5Pj8e[Deploy {partner-product-name} into a *new VPC* on AWS^]
+
+https://fwd.aws/zejvg[Deploy {partner-product-name} into an *existing VPC* on AWS^]
+****
 
 WARNING: If you’re deploying {partner-product-name} into an existing VPC, make sure that your VPC has two private subnets in different Availability Zones for the workload instances and that the subnets aren’t shared. This Quick Start doesn’t support https://docs.aws.amazon.com/vpc/latest/userguide/vpc-sharing.html[shared subnets^]. These subnets require https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html[network address translation (NAT) gateways^] in their route tables so that the instances can download packages and software without exposing them to the internet. Also make sure that the domain name option in the DHCP options is configured as explained in http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html[DHCP options sets^]. You provide your VPC settings when you launch the Quick Start.
 
