@@ -34,13 +34,18 @@ Resources:
         --enable-continuous-log-filter: "true"
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
+        --enable-auto-scaling: "true"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueStagingDatabase
-        --STAGING_TABLE_NAME: meter_readings_staging_json
+        --MDA_DATABASE_STAGING: !Ref GlueStagingDatabase
+        --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
+        --STAGING_TABLE_NAME: "meter_readings_staging_json"
+        --TARGET_TABLE_NAME: "meter_readings_integrated_parquet"
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
+      NumberOfWorkers: 20
+      WorkerType: G.1X
       ExecutionProperty:
-        MaxConcurrentRuns: 2
+        MaxConcurrentRuns: 1
       GlueVersion: "3.0"
 
   #
@@ -75,6 +80,29 @@ Resources:
   #
   # Glue Workflow
   #
+
+  GlueWorkflowEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Integration Glue Workflow Trigger"
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref StagingDataBucket
+          object:
+            key:
+              - prefix: "readings/json/"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${MeterReadingGlueWorkflow}"
+          Id: "integration_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
   MeterReadingGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
@@ -85,7 +113,7 @@ Resources:
     Properties:
       Actions:
         - CrawlerName: !Ref StagingDataBucketCrawler
-      Type: ON_DEMAND
+      Type: EVENT
       Description: "A on demand trigger for the glue workflow."
       WorkflowName: !Ref MeterReadingGlueWorkflow
 
@@ -120,6 +148,27 @@ Resources:
   #
   # Iam Roles
   #
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "glue:notifyEvent"
+                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${MeterReadingGlueWorkflow}"
+
   GlueCrawlerRole:
     Type: AWS::IAM::Role
     Properties:

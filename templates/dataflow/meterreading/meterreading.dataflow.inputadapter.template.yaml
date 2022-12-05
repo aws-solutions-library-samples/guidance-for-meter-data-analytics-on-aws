@@ -60,6 +60,9 @@ Parameters:
       See https://aws-quickstart.github.io/option1.html.'
     Type: String
 
+Outputs:
+  InboundDataBucket:
+    Value: !Ref InboundDataBucket
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
@@ -118,6 +121,7 @@ Resources:
           range_queue_url: !Ref InboundFileRangeQueue
           worker_memory: !Ref WorkerMemorySize
           max_workers: !Ref MaxNumberOfWorkers
+          suggested_workers: !Ref SuggestedRangesPerWorker
       Events:
         InboundDataArrived:
           Type: EventBridgeRule
@@ -133,7 +137,7 @@ Resources:
                     - !Ref InboundDataBucket
                 object:
                   key:
-                    - prefix: "uncompressed/"
+                    - prefix: "data/uncompressed/"
             Enabled: true
 
   KinesisProducerDependencyLayer:

@@ -6,7 +6,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 import pandas as pd
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE", "STAGING_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE_STAGING", "STAGING_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
@@ -15,7 +15,7 @@ job.init(args["JOB_NAME"], args)
 
 # Script generated for node Data Catalog table
 DataCatalogtable_node1 = glueContext.create_dynamic_frame.from_catalog(
-    database=args["MDA_DATABASE"],
+    database=args["MDA_DATABASE_STAGING"],
     table_name=args["STAGING_TABLE_NAME"],
     transformation_ctx="DataCatalogtable_node1",
     additional_options = {'useS3ListImplementation': True}
@@ -54,7 +54,7 @@ S3bucket_node3 = glueContext.write_dynamic_frame.from_options(
     format="glueparquet",
     connection_options={
         "path": "s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
-        "partitionKeys": ["year", "month", "day", "hour"],
+        "partitionKeys": ["reading_type", "year", "month", "day", "hour"],
         "groupFiles": "inPartition",
         "groupSize": "104857600" # 104857600 bytes (100 MB)
     },
