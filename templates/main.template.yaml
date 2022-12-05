@@ -14,14 +14,6 @@ Metadata:
           - ClusterName
           - DBName
       - Label:
-          default: Network configuration
-        Parameters:
-          - AvailabilityZones
-          - VPCCIDR
-          - PrivateSubnet1ACIDR
-          - PrivateSubnet2ACIDR
-          - RemoteAccessCIDR
-      - Label:
           default: AWS Glue configuration
         Parameters:
           - LandingzoneTransformer
@@ -49,14 +41,6 @@ Metadata:
         default: Amazon Redshift cluster name
       DBName:
         default: Amazon Redshift database name
-      PrivateSubnet1ACIDR:
-        default: Private subnet 1A CIDR
-      PrivateSubnet2ACIDR:
-        default: Private subnet 2A CIDR
-      VPCCIDR:
-        default: VPC CIDR
-      RemoteAccessCIDR:
-        default: Remote access CIDR block
       AvailabilityZones:
         default: Availability Zones
       QSS3BucketName:
@@ -79,22 +63,6 @@ Metadata:
         default: Special data adapters for metering conversions
 
 Resources:
-  VPC:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        AvailabilityZones: !Join
-          - ','
-          - !Ref 'AvailabilityZones'
-        PrivateSubnet1ACIDR: !Ref 'PrivateSubnet1ACIDR'
-        PrivateSubnet2ACIDR: !Ref 'PrivateSubnet2ACIDR'
-        VPCCIDR: !Ref VPCCIDR
-        NumberOfAZs: 2
-      TemplateURL:
-        !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template.yaml'
-        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
 
   Workload:
     Type: 'AWS::CloudFormation::Stack'
@@ -110,13 +78,6 @@ Resources:
             - !Ref 'AWS::Region'
             - !Ref 'QSS3BucketRegion'
       Parameters:
-        Subnet1ID:
-          Fn::GetAtt: [VPC, Outputs.PrivateSubnet1AID]
-        Subnet2ID: 
-          Fn::GetAtt: [VPC, Outputs.PrivateSubnet2AID]
-        VPCID: 
-          Fn::GetAtt: [VPC, Outputs.VPCID]
-        RemoteAccessCIDR: !Ref RemoteAccessCIDR
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -147,11 +108,6 @@ Parameters:
     Type: String
     Default: redshift-cluster-1
     Description: Amazon Redshift cluster name.
-
-  RemoteAccessCIDR:
-    Type: String
-    Default: 0.0.0.0/0
-    Description: CIDR block from which access to the Amazon Redshift cluster is allowed.
 
   LandingzoneTransformer:
     Type: String

@@ -38,11 +38,12 @@ Resources:
         --enable-s3-parquet-optimized-committer: true
         --MDA_DATABASE_STAGING: !Ref GlueStagingDatabase
         --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
-        --STAGING_TABLE_NAME: meter_readings_staging_json
-        --TARGET_TABLE_NAME: meter_readings_integrated_parquet
+        --STAGING_TABLE_NAME: "meter_readings_staging_json"
+        --TARGET_TABLE_NAME: "meter_readings_integrated_parquet"
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       NumberOfWorkers: 20
+      WorkerType: G.1X
       ExecutionProperty:
         MaxConcurrentRuns: 1
       GlueVersion: "3.0"
