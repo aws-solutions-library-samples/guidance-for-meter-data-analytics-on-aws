@@ -1,0 +1,260 @@
+{
+  "Comment": "Readings Downloader",
+  "StartAt": "Main Process",
+  "States": {
+    "Main Process": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Update integrations Db Record",
+          "States": {
+            "Update integrations Db Record": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName.$": "$.integration_args.integrations_table",
+                "Key": {
+                  "integration_id": {
+                    "S.$": "$.integration_id"
+                  }
+                },
+                "UpdateExpression": "SET #state = :state, #updated = :updated",
+                "ExpressionAttributeNames": {
+                  "#state": "state",
+                  "#updated": "updated"
+                },
+                "ExpressionAttributeValues": {
+                  ":state": {
+                    "S": "running"
+                  },
+                  ":updated": {
+                    "S.$": "$$.State.EnteredTime"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "Next": "Request File"
+            },
+            "Request File": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${GetReadingsFileLambdaFunction}"
+              },
+              "OutputPath": "$.Payload",
+              "Next": "State Route"
+            },
+            "State Route": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.run_detail.state",
+                  "StringMatches": "*completed",
+                  "Next": "Download File"
+                },
+                {
+                  "Variable": "$.run_detail.state",
+                  "StringMatches": "*skipped",
+                  "Next": "Set idle status and next_eligible on integrations Db Record"
+                }
+              ],
+              "Default": "Wait"
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "Request File Status"
+            },
+            "Request File Status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${GetReadingsFileStatusLambdaFunction}"
+              },
+              "Next": "State Route"
+            },
+            "Download File": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${SFTPDownloadLambdaFunction}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Uncompress File"
+            },
+            "Uncompress File": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${UncompressFileLambdaFunction}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Copy Downloaded File to Processed Location"
+            },
+            "Copy Downloaded File to Processed Location": {
+              "Type": "Task",
+              "Next": "Delete Downloaded File",
+              "Parameters": {
+                "CopySource.$": "States.Format('{}/{}{}', $.integration_args.bucket, $.integration_args.landing_prefix, $.run_detail.downloaded_file)",
+                "Bucket.$": "$.integration_args.bucket",
+                "Key.$": "States.Format('{}{}', $.integration_args.processed_prefix, $.run_detail.downloaded_file)"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:s3:copyObject",
+              "ResultPath": null
+            },
+            "Delete Downloaded File": {
+              "Type": "Task",
+              "Next": "Set idle status, next_eligible, start_date on integrations Db Record",
+              "Parameters": {
+                "Bucket.$": "$.integration_args.bucket",
+                "Key.$": "States.Format('{}{}', $.integration_args.landing_prefix, $.run_detail.downloaded_file)"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:s3:deleteObject",
+              "ResultPath": null
+            },
+            "Set idle status and next_eligible on integrations Db Record": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName.$": "$.integration_args.integrations_table",
+                "Key": {
+                  "integration_id": {
+                    "S.$": "$.integration_id"
+                  }
+                },
+                "UpdateExpression": "SET #state = :state, #updated = :updated, #next_eligible = :next_eligible",
+                "ExpressionAttributeNames": {
+                  "#state": "state",
+                  "#updated": "updated",
+                  "#next_eligible": "next_eligible"
+                },
+                "ExpressionAttributeValues": {
+                  ":state": {
+                    "S": "idle"
+                  },
+                  ":updated": {
+                    "S.$": "$$.State.EnteredTime"
+                  },
+                  ":next_eligible": {
+                    "N.$": "$.run_detail.future_next_eligible"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            },
+            "Set idle status, next_eligible, start_date on integrations Db Record": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::dynamodb:updateItem",
+              "Parameters": {
+                "TableName.$": "$.integration_args.integrations_table",
+                "Key": {
+                  "integration_id": {
+                    "S.$": "$.integration_id"
+                  }
+                },
+                "UpdateExpression": "SET #state = :state, #updated = :updated, #next_eligible = :next_eligible, #integration_args.#start_date = :start_date",
+                "ExpressionAttributeNames": {
+                  "#state": "state",
+                  "#updated": "updated",
+                  "#next_eligible": "next_eligible",
+                  "#start_date": "start_date",
+                  "#integration_args": "integration_args"
+                },
+                "ExpressionAttributeValues": {
+                  ":state": {
+                    "S": "idle"
+                  },
+                  ":updated": {
+                    "S.$": "$$.State.EnteredTime"
+                  },
+                  ":next_eligible": {
+                    "N.$": "$.run_detail.future_next_eligible"
+                  },
+                  ":start_date": {
+                    "S.$": "$.run_detail.end_date"
+                  }
+                }
+              },
+              "ResultPath": null,
+              "End": true
+            }
+          }
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "Set failure status on integrations Db Record"
+        }
+      ],
+      "Next": "Job Succeeded",
+      "ResultPath": null
+    },
+    "Job Succeeded": {
+      "Type": "Succeed"
+    },
+    "Set failure status on integrations Db Record": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName.$": "$.integration_args.integrations_table",
+        "Key": {
+          "integration_id": {
+            "S.$": "$.integration_id"
+          }
+        },
+        "UpdateExpression": "SET #state = :state, #updated = :updated",
+        "ExpressionAttributeNames": {
+          "#state": "state",
+          "#updated": "updated"
+        },
+        "ExpressionAttributeValues": {
+          ":state": {
+            "S": "failure"
+          },
+          ":updated": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "Fail Workflow"
+    },
+    "Fail Workflow": {
+      "Type": "Fail"
+    }
+  }
+}

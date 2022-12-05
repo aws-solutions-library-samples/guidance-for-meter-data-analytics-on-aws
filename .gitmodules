@@ -13,3 +13,6 @@
 [submodule "quickstart-amazon-redshift"]
 	path = quickstart-amazon-redshift
 	url = https://github.com/aws-quickstart/quickstart-amazon-redshift.git
+[submodule "submodules/quickstart-aws-utility-meter-data-generator"]
+	path = submodules/quickstart-aws-utility-meter-data-generator
+	url = git@github.com:aws-quickstart/quickstart-aws-utility-meter-data-generator.git
