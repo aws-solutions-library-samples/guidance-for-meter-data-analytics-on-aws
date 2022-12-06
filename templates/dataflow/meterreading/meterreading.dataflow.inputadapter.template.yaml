@@ -260,8 +260,6 @@ Resources:
   #
 
   CleanupInboundBucketsArtifacts:
-    DependsOn:
-      - InboundDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt CleanupInboundBucketFunction.Arn
