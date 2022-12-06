@@ -44,27 +44,15 @@ The updated content have to be copied to an S3 bucket from which it will be depl
 The configuration parameter can be provided via the Console, CLI or File.
 Here we use the provided script `apply-stack.sh` to deploy the Quick Start, the scripts expects the parameter json as an input value.
 
-Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. (will create a new VPC)
+Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. 
 
 ```json
 
 [
-  {
-    "ParameterKey": "AdminUsername",
-    "ParameterValue": "meteradmin"
-  },
-  {
-    "ParameterKey": "AdminUserPassword",
-    "ParameterValue": "MeterAdmin2020!"
-  },
-  {
-    "ParameterKey": "ClusterName",
-    "ParameterValue": "redshift-meter-cluster"
-  },
-  {
-    "ParameterKey": "RemoteAccessCIDR",
-    "ParameterValue": "0.0.0.0/0"
-  },
+   {
+      "ParameterKey": "MeterDataGenerator",
+      "ParameterValue": "DISABLED"
+   },
   {
     "ParameterKey": "QSS3BucketName",
     "ParameterValue": "mda-data-<account_id>"
@@ -76,26 +64,6 @@ Adjust the following template and store it besides the `apply-script.sh` as `sta
   {
     "ParameterKey": "QSS3BucketRegion",
     "ParameterValue": "us-east-1"
-  },
-  {
-    "ParameterKey": "AvailabilityZones",
-    "ParameterValue": "us-east-1a,us-east-1b"
-  },
-  {
-    "ParameterKey": "LandingzoneTransformer",
-    "ParameterValue": "london"
-  },
-  {
-    "ParameterKey": "DeploySpecialAdapters",
-    "ParameterValue": "mrasco"
-  },
-  {
-    "ParameterKey": "IncludeRedshift",
-    "ParameterValue": "True"
-  },
-  {
-    "ParameterKey": "IncludeEtlAggregationWfl",
-    "ParameterValue": "True"
   }
 ]
 
@@ -111,65 +79,3 @@ Call the apply script and provide the stack parameter file:
 The delete script will empty all buckets before removing the stack
 `./delete-stack.sh`
 
-### Parameter template, if an existing VPC should be reused
-```json
-
-[
-    {
-    "ParameterKey": "AdminUsername",
-    "ParameterValue": "meteradmin"
-    },
-    {
-    "ParameterKey": "AdminUserPassword",
-    "ParameterValue": "MeterAdmin2020!"
-    },
-    {
-    "ParameterKey": "ClusterName",
-    "ParameterValue": "redshift-meter-cluster"
-    },
-    {
-    "ParameterKey": "Subnet1ID",
-    "ParameterValue": "<subnet_id_1>"
-    },
-    {
-    "ParameterKey": "Subnet2ID",
-    "ParameterValue": "<subnet_id_2>"
-    },
-    {
-    "ParameterKey": "VPCID",
-    "ParameterValue": "<vpc_id>"
-    },
-    {
-    "ParameterKey": "RemoteAccessCIDR",
-    "ParameterValue": "0.0.0.0/0"
-    },
-    {
-    "ParameterKey": "QSS3BucketName",
-    "ParameterValue": "mda-data-<account_id>"
-    },
-    {
-    "ParameterKey": "QSS3KeyPrefix",
-    "ParameterValue": "artefacts/"
-    },
-    {
-    "ParameterKey": "QSS3BucketRegion",
-    "ParameterValue": "us-east-1"
-    },
-    {
-    "ParameterKey": "VPCRouteTableId",
-    "ParameterValue": "<rtb_id>"
-    },
-    {
-    "ParameterKey": "AvailabilityZone",
-    "ParameterValue": "us-east-1a"
-    },
-    {
-    "ParameterKey": "LandingzoneTransformer",
-    "ParameterValue": "london"
-    },
-    {
-    "ParameterKey": "IncludeRedshift",
-    "ParameterValue": "True"
-    }
-]
-```
