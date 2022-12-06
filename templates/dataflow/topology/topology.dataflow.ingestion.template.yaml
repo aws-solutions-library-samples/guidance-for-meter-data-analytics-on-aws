@@ -29,17 +29,6 @@ Parameters:
       This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
-      hosted. Keep the default Region unless you are customizing the template. 
-      Changing this Region updates code references to point to a new Quick Start location. 
-      When using your own bucket, specify the Region. 
-      See https://aws-quickstart.github.io/option1.html.'
-    Type: String
-
-Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 
 Resources:
 
@@ -131,7 +120,7 @@ Resources:
                   # use filename as subfolder to separate the different grid components
                   sub_folder = o.replace(".json","")
                   dest_key = f"{dest_prefix}{sub_folder}/{o}"
-                  
+          
                   logging.info('copy_source: %s' % copy_source)
                   logging.info('dest_bucket = %s'%dest_bucket)
                   logging.info('key = %s' %key)
@@ -147,7 +136,7 @@ Resources:
                 sub_folder = o.replace(".json","")
                 dest_key = f"{dest_prefix}{sub_folder}/{o}"
                 keys.append(dest_key)
-              
+          
               detail =  {
                 'bucket': dest_bucket,
                 'objects': json.dumps(keys)

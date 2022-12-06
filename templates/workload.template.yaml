@@ -3,6 +3,7 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: "Workload template to deploy the AWS Quick Start for the Utility Meter Data Analytics platform in an existing VPC. (qs-1r18anahd)"
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+  DeployMeterGeneratorAndHesSimulator: !Equals [ !Ref MeterDataGenerator, 'ENABLED' ]
 
 Resources:
   CopyGlueScriptsStack:
@@ -22,8 +23,9 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  MeterDataGenerator:
+  MeterDataGeneratorStack:
     Type: 'AWS::CloudFormation::Stack'
+    Condition: DeployMeterGeneratorAndHesSimulator
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/templates/workload.template.yaml'
@@ -36,6 +38,7 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
+        GenerationState: 'ENABLED'
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/'
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -94,6 +97,7 @@ Resources:
 
   HesAdapterStack:
     Type: 'AWS::CloudFormation::Stack'
+    Condition: DeployMeterGeneratorAndHesSimulator
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/hes.adapter.yaml'
@@ -106,13 +110,13 @@ Resources:
               !Ref QSS3BucketName,
             ]
       Parameters:
+        OrchestratorState: "ENABLED"
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-        SFTPServerAddress: !GetAtt MeterDataGenerator.Outputs.SftpServerAddress
-        SFTPUserName: !GetAtt MeterDataGenerator.Outputs.SftpUserName
-        SFTPSecretARN: !GetAtt MeterDataGenerator.Outputs.SecretARN
-        ReadingsFileBaseURL: !GetAtt MeterDataGenerator.Outputs.apiGatewayInvokeURL
+        SFTPServerAddress: !GetAtt MeterDataGeneratorStack.Outputs.SftpServerAddress
+        SFTPUserName: !GetAtt MeterDataGeneratorStack.Outputs.SftpUserName
+        SFTPSecretARN: !GetAtt MeterDataGeneratorStack.Outputs.SecretARN
+        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.apiGatewayInvokeURL
         InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
 
   WeatherDataflowStack:
@@ -134,7 +138,6 @@ Resources:
         GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -158,7 +161,6 @@ Resources:
         GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        IntegrationEventBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -176,6 +178,16 @@ Outputs:
     Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
+  MeterDataGenerator:
+    Default: 'DISABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+    Description:
+      Enable or Disable the meter simulator. If disabled the simulation stack will NOT be deployed. 
+      If enabled the meter generator as well as HES simulator will be deployed, and both start to generate meter reads immediately. 
+      (additional costs can occur).
+    Type: String
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription:
