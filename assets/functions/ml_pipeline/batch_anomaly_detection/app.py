@@ -23,7 +23,8 @@ def weekend(ds):
 
 
 def get_batch_data(meter_start, meter_end, data_end, db_schema, connection):
-    query = '''select meter_id, date_trunc('day', reading_date_time) as ds, sum(reading_value) as y 
+    query = ( # nosec
+     '''select meter_id, date_trunc('day', reading_date_time) as ds, sum(reading_value) as y 
   from "{}".daily
     where meter_id between '{}' and '{}'
     and reading_type = 'INT'
@@ -31,7 +32,7 @@ def get_batch_data(meter_start, meter_end, data_end, db_schema, connection):
   and reading_date_time <= timestamp '{}'
     group by 2,1
     order by 2,1;
-    '''.format(db_schema, meter_start, meter_end, data_end, data_end)
+    ''').format(db_schema, meter_start, meter_end, data_end, data_end)
 
     df_daily = pd.read_sql(query, connection)
     df_daily['weekend'] = df_daily['ds'].apply(weekend)
@@ -66,9 +67,10 @@ def fit_predict_model(meter, timeseries):
 
 
 def process_batch(meter_start, meter_end, data_end, db_schema, connection):
-    query = '''select meter_id, max(ds) as ds from "{}".anomaly
+    query = ( # nosec
+     '''select meter_id, max(ds) as ds from "{}".anomaly
                where meter_id between '{}' and '{}' group by 1;
-        '''.format(db_schema, meter_start, meter_end)
+        ''').format(db_schema, meter_start, meter_end)
     df_anomaly = pd.read_sql(query, connection)
     anomaly_meters = df_anomaly.meter_id.tolist()
 
@@ -103,7 +105,7 @@ def lambda_handler(event, context):
 
     result = process_batch(batch_start, batch_end, data_end, DB_SCHEMA, ATHENA_CONNECTION)
 
-    result.to_csv('/tmp/anomaly.csv', index=False)
+    result.to_csv('/tmp/anomaly.csv', index=False) # nosec
     S3.Bucket(S3_BUCKET) \
         .Object(os.path.join('meteranalytics', 'anomaly/{}/batch_{}_{}.csv'.format(data_end, batch_start, batch_end))) \
-        .upload_file('/tmp/anomaly.csv')
+        .upload_file('/tmp/anomaly.csv') # nosec

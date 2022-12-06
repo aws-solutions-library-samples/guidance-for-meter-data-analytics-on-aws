@@ -27,20 +27,22 @@ ATHENA_CONNECTION = connect(s3_staging_dir='s3://{}/'.format(ATHENA_OUTPUT_BUCKE
 
 
 def get_weather(connection, start, schema):
-    weather_data = '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, 
+    weather_data = ( # nosec
+    '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, 
     temperature, apparenttemperature,  humidity
     from "{}".weather
     where time >= '{}'
     order by 1;
-    '''.format(schema, start)
+    ''').format(schema, start)
     df_weather = pd.read_sql(weather_data, connection)
     df_weather = df_weather.set_index('datetime')
     return df_weather
 
 
 def get_meters(connection, samples, schema):
-    selected_households = '''select distinct meter_id
-        from "{}".daily limit {};'''.format(schema, samples)
+    selected_households = ( # nosec
+        '''select distinct meter_id
+        from "{}".daily limit {};''').format(schema, samples)
 
     df_meters = pd.read_sql(selected_households, connection)
     return df_meters['meter_id'].tolist()
@@ -68,7 +70,8 @@ def lambda_handler(event, context):
 
     meter_samples = get_meters(ATHENA_CONNECTION, training_samples, DB_SCHEMA)
 
-    q = '''
+    q = ( # nosec
+         '''
             select date_trunc('HOUR', reading_date_time) as datetime, meter_id, sum(reading_value) as consumption
                 from "{}".daily
                 where meter_id in ('{}')
@@ -76,7 +79,7 @@ def lambda_handler(event, context):
                 and reading_date_time >= timestamp '{}'
                 and reading_date_time < timestamp '{}'
                 group by 2, 1
-        '''.format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
+        ''').format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
 
     result = pd.read_sql(q, ATHENA_CONNECTION)
     result = result.set_index('datetime')

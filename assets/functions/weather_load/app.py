@@ -11,13 +11,13 @@ s3 = boto3.client("s3")
 
 def load_weather_data(start: datetime,
                       end: datetime):
-    Stations.cache_dir = "/tmp/meteostat/stations"
+    Stations.cache_dir = "/tmp/meteostat/stations" # nosec
     stations = Stations()
     stations = stations.nearby(47.608013, -122.335167)
 
     station = stations.fetch(1)
 
-    Hourly.cache_dir = "/tmp/meteostat/hourly"
+    Hourly.cache_dir = "/tmp/meteostat/hourly" # nosec
     data = Hourly(station, start, end)
 
     return data.fetch()
@@ -38,11 +38,11 @@ def lambda_handler(event, context):
     weather_data = load_weather_data(start, end)
 
     # write local file
-    file_name = f"weather_data_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
-    weather_data.to_csv(f"/tmp/{file_name}", encoding='utf-8')
+    file_name = f"weather_data_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv" # nosec
+    weather_data.to_csv(f"/tmp/{file_name}", encoding='utf-8') # nosec
     # upload to S3
     try:
-        s3.upload_file(f"/tmp/{file_name}", weather_data_bucket, f"weather/{file_name}")
+        s3.upload_file(f"/tmp/{file_name}", weather_data_bucket, f"weather/{file_name}") # nosec
     except ClientError as e:
         logging.error(e)
 

@@ -53,12 +53,13 @@ SAGEMAKER = boto3.client('runtime.sagemaker')
 
 
 def get_weather(connection, start, db_schema):
-    weather_data = '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, temperature,
+    weather_data = ( # nosec
+        '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, temperature,
     apparenttemperature, humidity
     from "{}".weather
     where time >= '{}'
     order by 1;
-    '''.format(db_schema, start)
+    ''').format(db_schema, start)
     df_weather = pd.read_sql(weather_data, connection)
     df_weather = df_weather.set_index('datetime')
     return df_weather
@@ -124,13 +125,14 @@ def lambda_handler(event, context):
     data_end = queryParameter['data_end']
 
     connection = connect(s3_staging_dir='s3://{}/'.format(ATHENA_OUTPUT_BUCKET), region_name=REGION)
-    query = '''select date_trunc('HOUR', reading_date_time) as datetime, sum(reading_value) as consumption
+    query = ( #nosec
+     '''select date_trunc('HOUR', reading_date_time) as datetime, sum(reading_value) as consumption
                 from "{}".daily
                 where meter_id = '{}' and reading_date_time >= timestamp '{}'
                 and  reading_date_time < timestamp '{}'
                 and reading_type = 'INT'
                 group by 1;
-                '''.format(DB_SCHEMA, meter_id, data_start, data_end)
+                ''').format(DB_SCHEMA, meter_id, data_start, data_end)
     result = pd.read_sql(query, connection)
     result = result.set_index('datetime')
 

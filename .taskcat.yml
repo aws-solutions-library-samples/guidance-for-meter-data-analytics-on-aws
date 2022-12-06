@@ -30,4 +30,4 @@ tests:
       QSS3BucketName: $[taskcat_autobucket]
       QSS3KeyPrefix: quickstart-aws-utility-meter-data-analytics-platform/
       QSS3BucketRegion: $[taskcat_current_region]
-    template: ./templates/main.template.yaml
+    template: ./templates/workload.template.yaml

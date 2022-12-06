@@ -28,7 +28,7 @@ def lambda_handler(event, context):
     batch_size = event['Batch_size']
 
     # Todo, more efficient way is to create a meter list table instead of getting it from raw data
-    df_meters = pd.read_sql('''select distinct meter_id from "{}".daily order by meter_id'''.format(SCHEMA),
+    df_meters = pd.read_sql('''select distinct meter_id from "{}".daily order by meter_id'''.format(SCHEMA), # nosec
                             ATHENA_CONNECTION)
     meters = df_meters['meter_id'].tolist()
 

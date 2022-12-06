@@ -50,9 +50,6 @@ Resources:
   #
 
   CleanupBucketsArtifacts:
-    DependsOn:
-      - StagingDataBucket
-      - IntegratedDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt 'CleanupBucketFunction.Arn'

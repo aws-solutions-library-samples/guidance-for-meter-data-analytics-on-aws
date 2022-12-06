@@ -30,11 +30,11 @@ def lambda_handler(event, context):
         new_file_name = object_key.replace(".json", ".parquet")
         df = pd.json_normalize(json_topo)
 
-        os.makedirs(f"/tmp/{new_file_name}".rsplit('/', 1)[0], exist_ok=True)
-        write(f"/tmp/{new_file_name}", df, compression='SNAPPY')
+        os.makedirs(f"/tmp/{new_file_name}".rsplit('/', 1)[0], exist_ok=True) # nosec
+        write(f"/tmp/{new_file_name}", df, compression='SNAPPY') # nosec
 
         try:
-            s3.upload_file(f"/tmp/{new_file_name}", topology_integrated_data_bucket, f"{new_file_name}")
+            s3.upload_file(f"/tmp/{new_file_name}", topology_integrated_data_bucket, f"{new_file_name}") # nosec
         except ClientError as e:
             logging.error(e)
 

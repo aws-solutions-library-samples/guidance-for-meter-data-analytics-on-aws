@@ -37,21 +37,23 @@ def write_upload_file(bucket, path, data):
 
 
 def get_weather(connection, start, db_schema):
-    weather_data = '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, temperature,
+    weather_data = ( # nosec
+     '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, temperature,
                     apparenttemperature, humidity
                     from "{}".weather
                     where time >= '{}'
                     order by 1;
-                    '''.format(db_schema, start)
+                    ''').format(db_schema, start)
     df_weather = pd.read_sql(weather_data, connection)
     df_weather = df_weather.set_index('datetime')
     return df_weather
 
 
 def get_meters(connection, start, end, db_schema):
-    selected_households = '''select distinct meter_id
+    selected_households = ( # nosec
+         '''select distinct meter_id
                   from "{}".daily where meter_id between '{}' and '{}' order by meter_id;
-                  '''.format(db_schema, start, end)
+                  ''').format(db_schema, start, end)
 
     df_meters = pd.read_sql(selected_households, connection)
     return df_meters['meter_id'].tolist()
@@ -68,14 +70,15 @@ def lambda_handler(event, context):
     meter_samples = get_meters(ATHENA_CONNECTION, batch_start, batch_end, DB_SCHEMA)
 
     # test data
-    q = '''select date_trunc('HOUR', reading_date_time) as datetime, meter_id, sum(reading_value) as consumption
+    q = ( # nosec
+         '''select date_trunc('HOUR', reading_date_time) as datetime, meter_id, sum(reading_value) as consumption
               from "{}".daily
               where meter_id in ('{}')
               and reading_type = 'INT'
               and reading_date_time >= timestamp '{}'
               and reading_date_time < timestamp '{}'
               group by 2, 1
-              ;'''.format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
+              ;''').format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
 
     batch_job = pd.read_sql(q, ATHENA_CONNECTION)
     batch_job = batch_job.set_index('datetime')

@@ -17,9 +17,6 @@ Parameters:
     Type: String
   MdaGlueScriptBucket:
     Type: String
-  IntegrationEventBus:
-    Type: String
-    Default: "default"
 
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -91,5 +88,4 @@ Resources:
         StagingDataBucket: !Ref StagingDataBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
 

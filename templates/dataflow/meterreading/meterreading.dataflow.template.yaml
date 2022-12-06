@@ -93,7 +93,6 @@ Resources:
         StagingRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.StagingRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
 
   # MeteringDataflowIntegrationStack
   IntegrationMeterReadingDataflowStack:
