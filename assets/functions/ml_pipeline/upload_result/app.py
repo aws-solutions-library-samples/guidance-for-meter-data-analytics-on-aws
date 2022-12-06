@@ -28,9 +28,10 @@ S3 = boto3.resource('s3')
 
 
 def get_meters(connection, start, end, db_schema):
-    selected_households = '''select distinct meter_id
+    selected_households = ( # nosec
+         '''select distinct meter_id
                   from "{}".daily where meter_id between '{}' and '{}' order by meter_id;
-                  '''.format(db_schema, start, end)
+                  ''').format(db_schema, start, end)
 
     df_meters = pd.read_sql(selected_households, connection)
     return df_meters['meter_id'].tolist()
@@ -43,8 +44,8 @@ def lambda_handler(event, context):
     forecast_period = event['Forecast_period']
     prediction_length = forecast_period * 24
 
-    output = 'meteranalytics/inference/batch_%s_%s/batch.json.out' % (batch_start, batch_end)
-    S3.Bucket(S3_BUCKET).Object(output).download_file('/tmp/batch.out.json')
+    output = 'meteranalytics/inference/batch_%s_%s/batch.json.out' % (batch_start, batch_end) # nosec
+    S3.Bucket(S3_BUCKET).Object(output).download_file('/tmp/batch.out.json') # nosec
 
     freq = 'H'
     prediction_time = pd.Timestamp(forecast_start, freq=freq)
@@ -56,7 +57,7 @@ def lambda_handler(event, context):
 
     results = pd.DataFrame(columns=['meterid', 'datetime', 'kwh'])
     i = 0
-    with open('/tmp/batch.out.json') as fp:
+    with open('/tmp/batch.out.json') as fp: # nosec
         for line in fp:
             df = pd.DataFrame(data={**json.loads(line)['quantiles'],
                                     **dict_of_samples}, index=prediction_index)
@@ -66,9 +67,9 @@ def lambda_handler(event, context):
             i = i + 1
             results = results.append(dataframe)
 
-    results.to_csv('/tmp/forecast.csv', index=False)
+    results.to_csv('/tmp/forecast.csv', index=False) # nosec
     S3.Bucket(S3_BUCKET).Object(os.path.join('meteranalytics',
                                              'forecast/{}/batch_{}_{}.csv'.format(
                                                  forecast_start, batch_start,
                                                  batch_end))).upload_file(
-        '/tmp/forecast.csv')
+        '/tmp/forecast.csv') # nosec

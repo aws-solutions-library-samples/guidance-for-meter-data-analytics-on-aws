@@ -41,19 +41,21 @@ def get_config(name):
     return response['Item']["value"]
 
 def get_weather(connection, start, schema):
-    weather_data = '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, 
+    weather_data = ( # nosec
+     '''select date_parse(time,'%Y-%m-%d %H:%i:%s') as datetime, 
     temperature, apparenttemperature,  humidity
     from "{}".weather
     where time >= '{}'
     order by 1;
-    '''.format(schema, start)
+    ''').format(schema, start)
     df_weather = pd.read_sql(weather_data, connection)
     df_weather = df_weather.set_index('datetime')
     return df_weather
 
 
 def get_anomalous_data(connection, schema, meter_samples):
-    anomalous_data = '''select meter_id, ds from "{}".anomaly where anomaly=1 and meter_id in ('{}');'''.format(schema, "','".join(meter_samples))
+    anomalous_data = ( # nosec
+         '''select meter_id, ds from "{}".anomaly where anomaly=1 and meter_id in ('{}');''').format(schema, "','".join(meter_samples))
     df_anomalous_data = pd.read_sql(anomalous_data, connection)
     #print('df_anomalous_data:')
     #print(df_anomalous_data)
@@ -91,16 +93,18 @@ def lambda_handler(event, context):
     meter_samples = get_meter_ids(training_samples)
 
     if training_samples == 1:
-        q = '''
+        q = ( # nosec
+         '''
             select date_trunc('HOUR', reading_date_time) as datetime, meter_id, sum(reading_value) as consumption
                 from "{}".daily
                 where reading_type = 'INT'
                 and reading_date_time >= timestamp '{}'
                 and reading_date_time < timestamp '{}'
                 group by 2, 1
-        '''.format(DB_SCHEMA, data_start, data_end)
+        ''').format(DB_SCHEMA, data_start, data_end)
     else:
-        q = '''
+        q = ( # nosec
+         '''
                 select date_trunc('HOUR', reading_date_time) as datetime, meter_id, sum(reading_value) as consumption
                     from "{}".daily
                     where meter_id in ('{}')
@@ -108,7 +112,7 @@ def lambda_handler(event, context):
                     and reading_date_time >= timestamp '{}'
                     and reading_date_time < timestamp '{}'
                     group by 2, 1
-            '''.format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
+            ''').format(DB_SCHEMA, "','".join(meter_samples), data_start, data_end)
     
     result = pd.read_sql(q, ATHENA_CONNECTION)
 

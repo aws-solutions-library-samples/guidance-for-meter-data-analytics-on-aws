@@ -49,8 +49,11 @@ def lambda_handler(event, context):
     connection = connect(s3_staging_dir='s3://{}/'.format(ATHENA_OUTPUT_BUCKET), region_name=REGION)
 
     if USE_WEATHER_DATA == 1:
-        query = '''with weather_daily as (
-            select date_trunc('day', date_parse(time,'%Y-%m-%d %H:%i:%s')) as datetime,
+        # fmt: off
+        query = ( # nosec
+        ''' 
+            with weather_daily as (  
+            select date_trunc('day', date_parse(time,'%Y-%m-%d %H:%i:%s')) as datetime, 
             avg(temperature) as temperature, avg(apparenttemperature) as apparenttemperature, avg(humidity) as humidity
             from default.weather group by 1
         )
@@ -59,14 +62,15 @@ def lambda_handler(event, context):
         where meter_id = '{}'
         and cast(ma.ds as timestamp) >= timestamp '{}' and cast(ma.ds as timestamp) < timestamp '{}'
         and cast(ma.ds as timestamp) = mw.datetime
-        '''.format(DB_SCHEMA, DB_SCHEMA, meter_id, data_start, data_end)
+        ''').format(DB_SCHEMA, DB_SCHEMA, meter_id, data_start, data_end)
     else:
-        query = '''
+        query = ( # nosec
+        ''' 
         select * from "{}".anomaly
         where meter_id = '{}'
         and cast(ds as timestamp) >= timestamp '{}' and cast(ds as timestamp) < timestamp '{}'
-        '''.format(DB_SCHEMA, meter_id, data_start, data_end)
-
+        ''').format(DB_SCHEMA, meter_id, data_start, data_end)
+        # fmt: on
     if outlier_only == '1':
         query = query + ' and anomaly <> 0'
 

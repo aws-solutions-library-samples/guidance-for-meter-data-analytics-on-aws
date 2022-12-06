@@ -32,7 +32,7 @@ def kinesis_put_records(kinesis_records, stream_name, attempt=0, retries = 5):
 
         if attempt:
             # Exponential back-off
-            time.sleep(2 ** attempt * random.uniform(0, 0.1))
+            time.sleep(2 ** attempt * random.uniform(0, 0.1)) # nosec
 
         result = kinesis.put_records(StreamName=stream_name, Records=kinesis_records)
 
