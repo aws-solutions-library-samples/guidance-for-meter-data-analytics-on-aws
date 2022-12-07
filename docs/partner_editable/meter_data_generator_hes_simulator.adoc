@@ -1,0 +1,12 @@
+== Meter Data Generator and HES Simulator
+The Meter Data Generator and HES Simulator plus documentation can be found https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[here].
+
+During link:#_deploy_steps[Deployment] the Generator can be enabled/disabled. If enabled, two separate Stacks will be deployed, one with the Generator and HES Simulator and one with an HES adapter. The adapter has the responsability to regularly pull the HES Simulator for new data, and then prepare the data for further processing.
+
+.Enable/Disable Meter Data Generator during deployment (Default: DISABLED)
+```
+  {
+    "ParameterKey": "MeterDataGenerator",
+    "ParameterValue": "DISABLED|ENABLED"
+  }
+```

@@ -15,7 +15,7 @@ To see the capabilities of the QuickStart, follow the steps in this section to
 - customize the ETL scripts
 
 === Update meter generator and HES simulator settings
-
+TODO
 
 === Visualization
 The QuickStart provides a Grafana dashboard for visualisation, to setup the dashboard follow the following steps. TODO link to Grafana doc
@@ -59,7 +59,7 @@ The architecture shows an example implementation, services can change depending 
 image::../images/architecture/custom_dataflow.svg[Architecture,width=80%,height=80%]
 
 === ETL Scripts
-
+TODO
 
 
 
