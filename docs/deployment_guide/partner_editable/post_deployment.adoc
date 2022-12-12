@@ -1,3 +1,102 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
 
 == Postdeployment steps
+
+To see the capabilities of the QuickStart, follow the steps in this section to. These are additional information to dive deeper into the QuickStart, and adopt the original code basis.
+
+=== Visualization
+The QuickStart provides a Grafana dashboard for visualisation, to setup the dashboard follow the following steps. *TODO* link to Grafana doc
+
+=== Input Adapter
+The input adapter loads the meter reads from the external source (f.e. HES or FTP), and prepares them for the staging area. The input adapter can be exchanged to adopt different source systems and formats. This section will describe the input adapter that will be delivered with the QuickStart and explains which are the minimum changes to connect different systems and formats.
+
+*Connector to the HES simulator, which will be deployed with the QuickStart*
+
+.input adapter
+image::../images/architecture/input_adapter.svg[Architecture,width=80%,height=80%]
+
+The input adapter implementation connects to the provided HES simulator. The different steps are explained below, depending on the source system in question these need to be adapted.
+
+(1) The state machine orchestrates the generation and download of the meter reads file from the HES. As soon as the meter read file has been generated it needs to be downloaded a compressed file to the inbound bucket, afterwards another process extracts the file and stores it in the uncompressed folder.
+
+(2) The inbound bucket holds the compressed and uncompressed files, uncompressed files will be deleted and compressed files achieved to save storage and costs.
+
+(3) As soon as the file is extracted, an event will be sent which triggers an AWS Lambda function for further processing.
+
+(4) The File Range Extractor extracts range information (a range is a group of lines which should be processed together) from the uncompressed file based on the file size and number of chunks (configurable). Each range information will be sent to SQS.
+
+(5) Each worker takes a range from the queue and processes the respective meter reads (parse and transform) before sending each element to Amazon Kinesis. This process ensures that the content input file can be processed in parallel. The worker transform the CSV line into JSON, and creates a separate object for each reading type.
+
+(6) The Amazon Kinesis data stream is used to ingest the data into the staging area. The stream scales on-demand.
+
+=== Dataflows
+Every external datasource is implemented as a dataflow, the dataflow connects to the external source loads the necessary data and stores them in a purpose built database from where they can be accessed through the central data catalog.
+
+The QuickStart comes with two example dataflows for weather and topology data. To add a new dataflow, a data pipeline that loads the data from the source, prepares them and stores the results in an appropriate data store needs to be designed. Once implemented the data store needs to be added to the central data catalog from where the subsequent processes can access the data.
+
+The architecture shows an example implementation, services can change depending on the requirements.
+
+.custom dataflow
+image::../images/architecture/custom_dataflow.svg[Architecture,width=80%,height=80%]
+
+=== Data partitioning
+The curated data in the *integration stage* S3 bucket is partitioned by *reading type, year, month, day, hour*, as follows:
+
+`s3://IntegrationBucket/reading_type=<reading_type_value>/year=<year>/month=<month>/day=<day>/hour=<hour>/<meter-data-file-in-parquet-format>`
+
+You can find all meter reads for the hour of a day on the lowest level of the partition tree. To optimize query performance, the data is stored in a column-based file format (Parquet).
+
+=== Late-arriving data
+The data lake handles late-arriving meter reads, will be detected as soon as the data reaches the *staging stage*. If a late read is detected an event will be send to Amazon EventBridge. The ETL pipeline takes care of moving the late read to the correct partition, and makes sure that data is still stored in an optimized way.
+
+=== Data Formats
+*Inbound format*
+
+The input meter-data format is variable and can be adjusted as described in the section <<Customize this QuickStart,'Customize this Quick Start'>>. The sample input data format of the https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[Meter Data Generator] looks like the following:
+
+
+[cols="1,1,1", options="header"]
+.Inbound schema
+|===
+|Field
+|Type
+|Format
+|Description
+
+|time|timestamp|yyyy-MM-dd HH:mm:ss.SSSSSSS|The timestamp the read reaches the source system
+|reading_time|timestamp|yyyy-MM-dd HH:mm:ss.SSSSSSS|The timestamp of the actual read
+|device_id|string|7a044be7-2f1e-3bf1-aa86-b8b1b9064f19|uuid
+|measure_name|string|
+|load|double|0.000|Load, unit: A
+|crrnt|double|0.000|Current, unit: A
+|pf|double|0.000|Power Factor, between 0 and 1
+|kva|double|0.000|Volt Ampere, unit: VA
+|kw|double|0.000|Kilowatt, unit: kW
+|vltg|double|0.000|Voltage, unit V
+|===
+
+*Integrated format*
+
+Data is stored in the following format in the *integration stage*.
+
+[cols="1,1,1", options="header"]
+.Integration schema
+|===
+|Field
+|Type
+|Format
+
+|meter_id           |String     |
+|reading_value      |Double     |0.000
+|reading_date_time  |Timestamp  |yyyy-MM-dd HH:mm:ss.SSS
+|reading_type       |String     |load, crrnt, pf, kva, kw, vltg
+|unit               |String     |
+|obis_code          |String     |
+|phase              |String     |
+|reading_source     |String     |
+|reading_type       |String (Partitioned)   |
+|year               |String (Partitioned)   |
+|month              |String (Partitioned)   |
+|day                |String (Partitioned)   |
+|hour               |String (Partitioned)   |
+|===

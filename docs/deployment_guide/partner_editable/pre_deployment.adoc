@@ -1,3 +1,24 @@
 //Include any predeployment steps here, such as signing up for a Marketplace AMI or making any changes to a partner account. If there are no predeployment steps, leave this file empty.
 
 == Predeployment steps
+
+=== Meter Data Generator and HES Simulator
+The Meter Data Generator and HES Simulator plus documentation can be found https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[here].
+
+During deployment the Generator can be enabled/disabled. If enabled, two separate Stacks will be deployed, one with the Generator and HES Simulator and one with an HES adapter. The adapter has the responsibility to regularly pull the HES Simulator for new data, and then prepare the data for further processing. Furthermore, you can configure the number of devices (meters), as well as their reading interval. The configuration below will generate 50.000 meter reads every 15min (both values are also the default)
+
+.Enable/Disable Meter Data Generator during deployment (Default: DISABLED)
+```
+  {
+    "ParameterKey": "MeterDataGenerator",
+    "ParameterValue": "DISABLED|ENABLED"
+  },
+  {
+    "ParameterKey": "GenerationInterval",
+    "ParameterValue": "15"
+  },
+  {
+    "ParameterKey": "TotalDevices",
+    "ParameterValue": "50000"
+  }
+```

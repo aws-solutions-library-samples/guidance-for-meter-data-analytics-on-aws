@@ -1,4 +1,4 @@
-This guide covers the information you need to deploy the {partner-product-name} Partner Solution in the AWS Cloud.
+This guide covers the information you need to deploy the {partner-product-name} QuickStart in the AWS Cloud.
 
 // For advanced information about the product, troubleshooting, or additional functionality, refer to the https://{partner-solution-github-org}.github.io/{partner-solution-project-name}/operational/index.html[Operational Guide^].
 
