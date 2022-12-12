@@ -47,58 +47,32 @@ Here we use the provided script `apply-stack.sh` to deploy the Quick Start, the 
 Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. (will create a new VPC)
 
 ```json
-
 [
-  {
-    "ParameterKey": "AdminUsername",
-    "ParameterValue": "meteradmin"
-  },
-  {
-    "ParameterKey": "AdminUserPassword",
-    "ParameterValue": "MeterAdmin2020!"
-  },
-  {
-    "ParameterKey": "ClusterName",
-    "ParameterValue": "redshift-meter-cluster"
-  },
-  {
-    "ParameterKey": "RemoteAccessCIDR",
-    "ParameterValue": "0.0.0.0/0"
-  },
-  {
-    "ParameterKey": "QSS3BucketName",
-    "ParameterValue": "mda-data-<account_id>"
-  },
-  {
-    "ParameterKey": "QSS3KeyPrefix",
-    "ParameterValue": "artefacts/"
-  },
-  {
-    "ParameterKey": "QSS3BucketRegion",
-    "ParameterValue": "us-east-1"
-  },
-  {
-    "ParameterKey": "AvailabilityZones",
-    "ParameterValue": "us-east-1a,us-east-1b"
-  },
-  {
-    "ParameterKey": "LandingzoneTransformer",
-    "ParameterValue": "london"
-  },
-  {
-    "ParameterKey": "DeploySpecialAdapters",
-    "ParameterValue": "mrasco"
-  },
-  {
-    "ParameterKey": "IncludeRedshift",
-    "ParameterValue": "True"
-  },
-  {
-    "ParameterKey": "IncludeEtlAggregationWfl",
-    "ParameterValue": "True"
-  }
+   {
+      "ParameterKey":"QSS3BucketName",
+      "ParameterValue":"mda-data-<account_id>"
+   },
+   {
+      "ParameterKey":"QSS3KeyPrefix",
+      "ParameterValue":"artefacts/"
+   },
+   {
+      "ParameterKey":"QSS3BucketRegion",
+      "ParameterValue":"us-east-1"
+   },
+   {
+      "ParameterKey":"MeterDataGenerator",
+      "ParameterValue":"ENABLED"
+   },
+   {
+      "ParameterKey":"GenerationInterval",
+      "ParameterValue":"5"
+   },
+   {
+      "ParameterKey":"TotalDevices",
+      "ParameterValue":"5000000"
+   }
 ]
-
 ```
 
 ### Deploy MDA
