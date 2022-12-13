@@ -20,10 +20,11 @@ Resources:
         DestBucket: !Ref MdaGlueScriptBucket
         DestPrefix: 'scripts/'
         SourceBucket: !Ref QSS3BucketName
-        Prefix: !Sub '${QSS3KeyPrefix}assets/glue/scripts/'
+        Prefix: !Sub '${QSS3KeyPrefix}assets/glue/'
         Objects:
           - meterreadings-integration-job.py
           - weatherdata-integration-job.py
+          - meterreadings-late-reads-cleanup-job.py
 
     CopyArtifactsRole:
       Type: AWS::IAM::Role
