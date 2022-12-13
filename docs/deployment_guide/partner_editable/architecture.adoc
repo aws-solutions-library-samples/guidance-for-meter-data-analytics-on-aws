@@ -7,7 +7,7 @@ AWS Cloud.
 
 [#architecture1]
 .QuickStart architecture for {partner-product-short-name} on AWS
-image::../images/architecture/MDAv2_architecture_overview.svg[Architecture,width=100%,height=100%]
+image::../images/architecture_diagram.svg[Architecture,width=100%,height=100%]
 
 As shown in <<architecture1>>, the QuickStart sets up the following:
 
