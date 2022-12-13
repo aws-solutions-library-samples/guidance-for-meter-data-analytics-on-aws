@@ -600,7 +600,7 @@ Resources:
       Content:
         S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         S3Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/paramiko_py3_9.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/functions/layers/paramiko_py3_9.zip'
       LicenseInfo: 'Apache 2.0'
 
   ReadingsDownloaderStateMachine:
