@@ -6,12 +6,9 @@ HOME=$(pwd)
 rm packages/*.zip
 
 functions=(
-           "adapter/csv/inbound_file_range_extractor" \
-           "adapter/csv/inbound_file_range_worker" \
-           "outage_info" \
-           "meter_forecast" \
-           "get_anomaly"  \
-           "late_arriving_notification" \
+           "source/adapter/csv/inbound_file_range_extractor" \
+           "source/adapter/csv/inbound_file_range_worker" \
+           "source/late_arriving_notification" \
            "ml_pipeline/crawler/trigger_glue_crawler" \
            "ml_pipeline/crawler/get_glue_crawler_state" \
            "ml_pipeline/upload_result"  \
@@ -27,8 +24,8 @@ functions=(
            "ml_pipeline/split_batch_v2"  \
            "ml_pipeline/batch_anomaly_detection_v2" \
            "ml_pipeline/prepare_training_v2"  \
-           "weather_load" \
-           "topology_transformer" \
+           "source/weather_load" \
+           "source/topology_transformer" \
            "ml_pipeline/check_initial_pipeline_run")
 
 for lambda_folder in ${functions[*]};
