@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+cd ../assets/functions
 HOME=$(pwd)
 
 rm packages/*.zip
@@ -9,7 +10,6 @@ functions=(
            "adapter/csv/inbound_file_range_worker" \
            "outage_info" \
            "meter_forecast" \
-           "redshift/consumption" \
            "get_anomaly"  \
            "late_arriving_notification" \
            "ml_pipeline/crawler/trigger_glue_crawler" \
@@ -37,3 +37,5 @@ do
    echo $function_name
    (cd $lambda_folder; zip -9qr "$HOME/packages/${function_name}.zip" .;cd $HOME)
 done
+
+cd -
