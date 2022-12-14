@@ -195,7 +195,7 @@ Resources:
       ContentUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/layers/common/common-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/common/common-layer.zip'
       CompatibleRuntimes:
         - python3.7
       LicenseInfo: 'Available under the MIT-0 license.'

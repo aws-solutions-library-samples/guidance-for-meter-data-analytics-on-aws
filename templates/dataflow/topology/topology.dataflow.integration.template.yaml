@@ -79,7 +79,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/layers/topology/topology-transformer-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/topology/topology-transformer-layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'
