@@ -25,7 +25,7 @@ If functions were adjusted the functions have to be packaged first.
 To package the Lambda functions run the following script:
 
 ```bash
-cd scripts/
+cd scripts/bin
 ./create_deployment_packages.sh
 cd -
 ```
@@ -38,7 +38,7 @@ The updated content have to be copied to an S3 bucket from which it will be depl
    `aws s3 mb s3://mda-data-<account_id>`
 2. use the `sync.sh` script to sync the needed artefacts to S3
    ```bash
-   cd scripts/
+   cd scripts/bin
    ./sync.sh mda-data-<account_id>/artefacts
    ```
 
@@ -82,7 +82,7 @@ Adjust the following template and store it besides the `apply-script.sh` as `sta
 
 Call the apply script and provide the stack parameter file:
 ```bash
-cd scripts/
+cd scripts/bin
 ./apply-stack.sh stack-parameter.json
 ```
 
@@ -90,6 +90,6 @@ cd scripts/
 
 The delete script will empty all buckets before removing the stack
 ```bash
-cd scripts/
+cd scripts/bin
 ./delete-stack.sh
 ```

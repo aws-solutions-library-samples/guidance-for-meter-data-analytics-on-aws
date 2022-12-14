@@ -58,7 +58,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/topology_transformer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/topology_transformer.zip'
       Description: Lambda function to transform topology data
       MemorySize: 512
       Timeout: 240
@@ -79,7 +79,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/layers/topology/topology-transformer-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/layers/topology/topology-transformer-layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'

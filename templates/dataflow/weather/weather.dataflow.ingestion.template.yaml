@@ -101,7 +101,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/weather_load.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/weather_load.zip'
       Description: Lambda function to load weather data on a regular schedule
       MemorySize: 512
       Timeout: 300
@@ -129,7 +129,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/layers/weather/weather-load-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/layers/weather/weather-load-layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'
