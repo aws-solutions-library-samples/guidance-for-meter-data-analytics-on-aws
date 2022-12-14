@@ -158,7 +158,7 @@ Resources:
     Properties:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}assets/functions/packages/late_arriving_notification.zip'
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/late_arriving_notification.zip'
       Description: lambda to be called on object creation to adapt objects to clean format S3
       Environment:
         Variables:

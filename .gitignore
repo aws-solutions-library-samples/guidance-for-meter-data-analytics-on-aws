@@ -9,4 +9,4 @@ venv
 
 **/.aws-sam/
 **/samconfig.toml
-scripts/stack-parameter.json
+scripts/bin/stack-parameter.json

@@ -600,7 +600,7 @@ Resources:
       Content:
         S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         S3Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/layers/paramiko_py3_9.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/layers/paramiko_py3_9.zip'
       LicenseInfo: 'Apache 2.0'
 
   ReadingsDownloaderStateMachine:
@@ -612,7 +612,7 @@ Resources:
       DefinitionS3Location:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/readings_downloader_state_machine.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/readings_downloader_state_machine.json'
       DefinitionSubstitutions:
         GetReadingsFileLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:$LATEST'
         GetReadingsFileStatusLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:$LATEST'
