@@ -2,17 +2,54 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Topology dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      IntegratedDataBucket:
+        default: S3 integration data bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script S3 bucket
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
 Parameters:
   StagingDataBucket:
     Type: String
+    Description: 'S3 bucket to store staging data.'
   IntegratedDataBucket:
     Type: String
+    Description: 'S3 bucket to store integration data.'
   GlueStagingDatabase:
     Type: String
+    Description: 'Glue staging database.'
   GlueIntegratedDatabase:
     Type: String
+    Description: 'Glue integration database.'
   MdaGlueScriptBucket:
     Type: String
+    Description: 'Glue script bucket.'
 
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
@@ -36,14 +73,6 @@ Parameters:
       Only change this value if you customize or extend the Quick Start for your own use.
       This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
-    Type: String
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
-      hosted. Keep the default Region unless you are customizing the template. 
-      Changing this Region updates code references to point to a new Quick Start location. 
-      When using your own bucket, specify the Region. 
-      See https://aws-quickstart.github.io/option1.html.'
     Type: String
 
 Conditions:
@@ -94,7 +123,7 @@ Resources:
             Type: "Task"
             Parameters:
               Name: !Ref StagingTopologyDataBucketCrawler
-            Resource: "arn:aws:states:::aws-sdk:glue:startCrawler"
+            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
             ResultPath: null
             Next: TopologyDataTransformLambda
           TopologyDataTransformLambda:
@@ -102,13 +131,13 @@ Resources:
             Parameters:
               Payload.$: "$"
               FunctionName: !Ref TopologyTransformLambda
-            Resource: "arn:aws:states:::lambda:invoke"
+            Resource: !Sub "arn:${AWS::Partition}:states:::lambda:invoke"
             Next: IntegratedTopologyDataBucketCrawler
           IntegratedTopologyDataBucketCrawler:
             Type: "Task"
             Parameters:
               Name: !Ref IntegratedTopologyDataBucketCrawler
-            Resource: "arn:aws:states:::aws-sdk:glue:startCrawler"
+            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
             End: true
       Role: !GetAtt StepFunctionTopologyRole.Arn
 
@@ -220,8 +249,8 @@ Resources:
                 Action:
                   - "glue:StartCrawler"
                 Resource:
-                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${StagingTopologyDataBucketCrawler}"
-                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${IntegratedTopologyDataBucketCrawler}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${StagingTopologyDataBucketCrawler}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${IntegratedTopologyDataBucketCrawler}"
 
   GlueCrawlerRole:
     Type: AWS::IAM::Role
@@ -265,7 +294,8 @@ Resources:
               - "logs:CreateLogGroup"
               - "logs:CreateLogStream"
               - "logs:PutLogEvents"
-            Resource: "*"
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
           - Effect: Allow
             Action:
               - 's3:GetObject'
@@ -273,25 +303,27 @@ Resources:
               - 's3:ListBucket'
               - 's3:DeleteObject'
             Resource:
-              - !Sub "arn:aws:s3:::${StagingDataBucket}"
-              - !Sub "arn:aws:s3:::${StagingDataBucket}/*"
-              - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
-              - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
-              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
-              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
           - Effect: Allow
             Action:
-              - 'glue:GetTable*'
-              - 'glue:GetPartition*'
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
               - 'glue:BatchCreatePartition'
               - 'glue:BatchGetPartition'
               - 'glue:BatchUpdatePartition'
             Resource:
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_raw_*"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_raw_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
       Roles:
         - !Ref GlueCrawlerRole
         - !Ref RunLambdaRole
