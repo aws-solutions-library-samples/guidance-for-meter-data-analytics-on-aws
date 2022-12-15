@@ -10,19 +10,63 @@ Outputs:
   InboundDataBucket:
     Value: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundDataBucket
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+          - IntegrationBus
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      IntegratedDataBucket:
+        default: S3 integration data bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script S3 bucket
+      IntegrationBus:
+        default: Integration bus
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket Region
+
 Parameters:
   StagingDataBucket:
     Type: String
+    Description: 'S3 bucket to store staging data.'
   IntegratedDataBucket:
     Type: String
+    Description: 'S3 bucket to store integration data.'
   GlueStagingDatabase:
     Type: String
+    Description: 'Glue staging database.'
   GlueIntegratedDatabase:
     Type: String
+    Description: 'Glue integration database.'
   MdaGlueScriptBucket:
     Type: String
+    Description: 'Glue script bucket.'
   IntegrationBus:
     Type: String
+    Description: 'Integration bus to use for late arriving data notifications.'
 
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -93,7 +137,6 @@ Resources:
         StagingRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.StagingRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
 
   # MeteringDataflowIntegrationStack
   IntegrationMeterReadingDataflowStack:

@@ -6,6 +6,12 @@ To post feedback, submit feature ideas, or report bugs, use the **Issues** secti
 
 To submit code for this Quick Start, see the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).
 
+## CI Checks
+### Tascat
+Install and run [Taskcat](https://github.com/aws-ia/taskcat)
+
+### CFN Lint
+Install and run [CFN Lint](https://github.com/aws-cloudformation/cfn-lint) + [Custom RuleSet](https://github.com/aws-quickstart/qs-cfn-lint-rules)
 
 ## Customized deployment
 

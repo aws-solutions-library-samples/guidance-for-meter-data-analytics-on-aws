@@ -2,11 +2,45 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys staging streaming ingestion pipeline. (qs-1r18anahd)"
 
+Metadata:
+  cfn-lint:
+    config:
+      configure_rules:
+        RuleId: E9101
+      ignore_checks:
+        - E9101
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegrationBus
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+    ParameterLabels:
+      StagingDataBucket:
+        default: Staging S3 Bucket
+      IntegrationBus:
+        default: EventBridge integration bus
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket Region
+
 Parameters:
   StagingDataBucket:
     Type: String
+    Description: S3 bucket to store integration stage data.
   IntegrationBus:
     Type: String
+    Description: Integration bus to use for late arriving data notifications.
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
     ConstraintDescription: >-
@@ -17,7 +51,6 @@ Parameters:
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
-
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -62,7 +95,7 @@ Resources:
         RoleARN: !GetAtt DeliveryRole.Arn
 
       ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${StagingDataBucket}"
+        BucketARN: !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
         BufferingHints:
           IntervalInSeconds: '60'
           SizeInMBs: '100'
@@ -90,7 +123,7 @@ Resources:
                   ParameterValue: "\\n"
         S3BackupMode: Disabled
         S3BackupConfiguration:
-          BucketARN: !Sub "arn:aws:s3:::${StagingDataBucket}"
+          BucketARN: !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
           BufferingHints:
             IntervalInSeconds: '60'
             SizeInMBs: '50'
@@ -142,8 +175,8 @@ Resources:
               - 's3:ListBucketMultipartUploads'
               - 's3:PutObject'
             Resource:
-              - !Sub "arn:aws:s3:::${StagingDataBucket}"
-              - !Sub "arn:aws:s3:::${StagingDataBucket}*"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}*"
           - Effect: Allow
             Action:
               - 'kinesis:DescribeStream'
@@ -187,7 +220,6 @@ Resources:
                 object:
                   key:
                     - prefix: "readings/json/"
-            Enabled: true
 
   LambdaInvokePermission:
     Type: 'AWS::Lambda::Permission'
@@ -196,7 +228,7 @@ Resources:
       Action: 'lambda:InvokeFunction'
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Sub 'arn:aws:s3:::${StagingDataBucket}'
+      SourceArn: !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
 
   LateArrivingDataLambdaIAMRole:
     Type: 'AWS::IAM::Role'
@@ -220,17 +252,17 @@ Resources:
                 Action:
                   - 's3:GetBucketNotification'
                   - 's3:PutBucketNotification'
-                Resource: !Sub 'arn:aws:s3:::${StagingDataBucket}'
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
               - Effect: Allow
                 Action:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
-                Resource: 'arn:aws:logs:*:*:*'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
               - Effect: Allow
                 Action:
                   - 'events:PutEvents'
-                Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${IntegrationBus}'
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/${IntegrationBus}'
 
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
