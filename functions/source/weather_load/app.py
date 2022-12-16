@@ -24,7 +24,7 @@ def load_weather_data(start: datetime,
 
 
 def lambda_handler(event, context):
-    weather_data_bucket = os.environ["raw_data_bucket"]
+    weather_data_bucket = os.environ["staging_data_bucket"]
 
     if "initial" in event and event["initial"] is True:
         logging.info("Running initial weather data load.")

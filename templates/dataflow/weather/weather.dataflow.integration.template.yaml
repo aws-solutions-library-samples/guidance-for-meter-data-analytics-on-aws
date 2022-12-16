@@ -63,8 +63,8 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueIntegratedDatabase
-        --RAW_TABLE_NAME: weather_data_raw_weather
+        --MDA_DATABASE: !Ref GlueStagingDatabase
+        --STAGING_TABLE_NAME: weather_data_staging_weather
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       ExecutionProperty:
