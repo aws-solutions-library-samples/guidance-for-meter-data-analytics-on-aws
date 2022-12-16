@@ -6,6 +6,12 @@ To post feedback, submit feature ideas, or report bugs, use the **Issues** secti
 
 To submit code for this Quick Start, see the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).
 
+## CI Checks
+### Tascat
+Install and run [Taskcat](https://github.com/aws-ia/taskcat)
+
+### CFN Lint
+Install and run [CFN Lint](https://github.com/aws-cloudformation/cfn-lint) + [Custom RuleSet](https://github.com/aws-quickstart/qs-cfn-lint-rules)
 
 ## Customized deployment
 
@@ -25,7 +31,7 @@ If functions were adjusted the functions have to be packaged first.
 To package the Lambda functions run the following script:
 
 ```bash
-cd assets/functions/
+cd scripts/bin
 ./create_deployment_packages.sh
 cd -
 ```
@@ -37,7 +43,10 @@ The updated content have to be copied to an S3 bucket from which it will be depl
 1. create an S3 Bucket in your account
    `aws s3 mb s3://mda-data-<account_id>`
 2. use the `sync.sh` script to sync the needed artefacts to S3
-   `./sync.sh mda-data-<account_id>/artefacts`
+   ```bash
+   cd scripts/bin
+   ./sync.sh mda-data-<account_id>/artefacts
+   ```
 
 ### Create configuration
 
@@ -47,129 +56,46 @@ Here we use the provided script `apply-stack.sh` to deploy the Quick Start, the 
 Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. (will create a new VPC)
 
 ```json
-
 [
-  {
-    "ParameterKey": "AdminUsername",
-    "ParameterValue": "meteradmin"
-  },
-  {
-    "ParameterKey": "AdminUserPassword",
-    "ParameterValue": "MeterAdmin2020!"
-  },
-  {
-    "ParameterKey": "ClusterName",
-    "ParameterValue": "redshift-meter-cluster"
-  },
-  {
-    "ParameterKey": "RemoteAccessCIDR",
-    "ParameterValue": "0.0.0.0/0"
-  },
-  {
-    "ParameterKey": "QSS3BucketName",
-    "ParameterValue": "mda-data-<account_id>"
-  },
-  {
-    "ParameterKey": "QSS3KeyPrefix",
-    "ParameterValue": "artefacts/"
-  },
-  {
-    "ParameterKey": "QSS3BucketRegion",
-    "ParameterValue": "us-east-1"
-  },
-  {
-    "ParameterKey": "AvailabilityZones",
-    "ParameterValue": "us-east-1a,us-east-1b"
-  },
-  {
-    "ParameterKey": "LandingzoneTransformer",
-    "ParameterValue": "london"
-  },
-  {
-    "ParameterKey": "DeploySpecialAdapters",
-    "ParameterValue": "mrasco"
-  },
-  {
-    "ParameterKey": "IncludeRedshift",
-    "ParameterValue": "True"
-  },
-  {
-    "ParameterKey": "IncludeEtlAggregationWfl",
-    "ParameterValue": "True"
-  }
+   {
+      "ParameterKey":"QSS3BucketName",
+      "ParameterValue":"mda-data-<account_id>"
+   },
+   {
+      "ParameterKey":"QSS3KeyPrefix",
+      "ParameterValue":"artefacts/"
+   },
+   {
+      "ParameterKey":"QSS3BucketRegion",
+      "ParameterValue":"us-east-1"
+   },
+   {
+      "ParameterKey":"MeterDataGenerator",
+      "ParameterValue":"ENABLED"
+   },
+   {
+      "ParameterKey":"GenerationInterval",
+      "ParameterValue":"5"
+   },
+   {
+      "ParameterKey":"TotalDevices",
+      "ParameterValue":"5000000"
+   }
 ]
-
 ```
 
 ### Deploy MDA
 
 Call the apply script and provide the stack parameter file:
-`./apply-stack.sh stack-parameter.json`
+```bash
+cd scripts/bin
+./apply-stack.sh stack-parameter.json
+```
 
 ### Delete the MDA stack
 
 The delete script will empty all buckets before removing the stack
-`./delete-stack.sh`
-
-### Parameter template, if an existing VPC should be reused
-```json
-
-[
-    {
-    "ParameterKey": "AdminUsername",
-    "ParameterValue": "meteradmin"
-    },
-    {
-    "ParameterKey": "AdminUserPassword",
-    "ParameterValue": "MeterAdmin2020!"
-    },
-    {
-    "ParameterKey": "ClusterName",
-    "ParameterValue": "redshift-meter-cluster"
-    },
-    {
-    "ParameterKey": "Subnet1ID",
-    "ParameterValue": "<subnet_id_1>"
-    },
-    {
-    "ParameterKey": "Subnet2ID",
-    "ParameterValue": "<subnet_id_2>"
-    },
-    {
-    "ParameterKey": "VPCID",
-    "ParameterValue": "<vpc_id>"
-    },
-    {
-    "ParameterKey": "RemoteAccessCIDR",
-    "ParameterValue": "0.0.0.0/0"
-    },
-    {
-    "ParameterKey": "QSS3BucketName",
-    "ParameterValue": "mda-data-<account_id>"
-    },
-    {
-    "ParameterKey": "QSS3KeyPrefix",
-    "ParameterValue": "artefacts/"
-    },
-    {
-    "ParameterKey": "QSS3BucketRegion",
-    "ParameterValue": "us-east-1"
-    },
-    {
-    "ParameterKey": "VPCRouteTableId",
-    "ParameterValue": "<rtb_id>"
-    },
-    {
-    "ParameterKey": "AvailabilityZone",
-    "ParameterValue": "us-east-1a"
-    },
-    {
-    "ParameterKey": "LandingzoneTransformer",
-    "ParameterValue": "london"
-    },
-    {
-    "ParameterKey": "IncludeRedshift",
-    "ParameterValue": "True"
-    }
-]
+```bash
+cd scripts/bin
+./delete-stack.sh
 ```

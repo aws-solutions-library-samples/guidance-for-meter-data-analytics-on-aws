@@ -2,17 +2,45 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Weather dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      IntegratedDataBucket:
+        default: S3 integration data bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script S3 bucket
+
 Parameters:
   StagingDataBucket:
     Type: String
+    Description: 'S3 bucket to store staging data.'
   IntegratedDataBucket:
     Type: String
+    Description: 'S3 bucket to store integration data.'
   GlueStagingDatabase:
     Type: String
+    Description: 'Glue staging database.'
   GlueIntegratedDatabase:
     Type: String
+    Description: 'Glue integration database.'
   MdaGlueScriptBucket:
     Type: String
+    Description: 'Glue script bucket.'
 
 Resources:
   #
@@ -35,8 +63,8 @@ Resources:
         --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_DATABASE: !Ref GlueIntegratedDatabase
-        --RAW_TABLE_NAME: weather_data_raw_weather
+        --MDA_DATABASE: !Ref GlueStagingDatabase
+        --STAGING_TABLE_NAME: weather_data_staging_weather
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
       ExecutionProperty:
@@ -204,7 +232,8 @@ Resources:
               - "logs:CreateLogGroup"
               - "logs:CreateLogStream"
               - "logs:PutLogEvents"
-            Resource: "*"
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
           - Effect: Allow
             Action:
               - 's3:GetObject'
@@ -212,25 +241,27 @@ Resources:
               - 's3:ListBucket'
               - 's3:DeleteObject'
             Resource:
-              - !Sub "arn:aws:s3:::${StagingDataBucket}"
-              - !Sub "arn:aws:s3:::${StagingDataBucket}/*"
-              - !Sub "arn:aws:s3:::${IntegratedDataBucket}"
-              - !Sub "arn:aws:s3:::${IntegratedDataBucket}/*"
-              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}"
-              - !Sub "arn:aws:s3:::${MdaGlueScriptBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
           - Effect: Allow
             Action:
-              - 'glue:GetTable*'
-              - 'glue:GetPartition*'
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
               - 'glue:BatchCreatePartition'
               - 'glue:BatchGetPartition'
               - 'glue:BatchUpdatePartition'
             Resource:
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_staging_*"
-              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/weather_data_integrated_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_staging_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/weather_data_integrated_*"
       Roles:
         - !Ref GlueJobRole
         - !Ref GlueCrawlerRole

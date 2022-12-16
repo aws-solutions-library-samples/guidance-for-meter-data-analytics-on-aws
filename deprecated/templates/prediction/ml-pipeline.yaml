@@ -71,7 +71,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-orchestrator.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-orchestrator.asl.json'
       DefinitionSubstitutions:
         InitialTrainingStateMachine: !Ref MachineLearningPipelineModelTrainingStateMachine
         PredictionPipelineStateMachine: !Ref MachineLearningPipelinePreCalculationStateMachine
@@ -99,7 +99,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-model-training.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-model-training.asl.json'
       DefinitionSubstitutions:
         WorkingBucket: !Ref WorkingBucket
         LambdaPrepareTrainingName: !Ref PrepareTrainingFunction
@@ -158,7 +158,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-pre-calculation.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-pre-calculation.asl.json'
       DefinitionSubstitutions:
         LambdaSplitFunctionName: !Ref SplitBatchFunction
         LambdaPrepareFunctionName: !Ref PrepareBatchFunction
@@ -207,7 +207,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-anomalies-v2.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-anomalies-v2.asl.json'
       DefinitionSubstitutions:
         LambdaSplitBatchFunctionName: !Ref SplitBatchV2
         LambdaAnomalyFunctionName: !Ref BatchAnomalyDetectionV2
@@ -224,7 +224,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-full-v2.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-full-v2.asl.json'
       DefinitionSubstitutions:
         TrainingStateMachine: !Ref MachineLearningPipelineModelTrainingStateMachine
         AnomalyStateMachine: !Ref MachineLearningPipelineAnomalyStateMachineV2
@@ -255,7 +255,7 @@ Resources:
       DefinitionUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/ml-pipeline-trainingv2.asl.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/ml-pipeline-trainingv2.asl.json'
       DefinitionSubstitutions:
         WorkingBucket: !Ref WorkingBucket
         LambdaPrepareTrainingNameV2: !Ref PrepareTrainingFunctionV2
@@ -321,7 +321,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_check_pipeline_steps.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_check_pipeline_steps.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -336,7 +336,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_update_meter_ids.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_update_meter_ids.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -351,7 +351,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_split_batch_v2.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_split_batch_v2.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -366,7 +366,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_batch_anomaly_detection_v2.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_batch_anomaly_detection_v2.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -381,7 +381,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_prepare_training_v2.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_prepare_training_v2.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -395,7 +395,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_load_pipeline_parameter.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_load_pipeline_parameter.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -409,7 +409,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_prepare_training.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_prepare_training.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -423,7 +423,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_check_initial_pipeline_run.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_check_initial_pipeline_run.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -437,7 +437,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_state_topic_subscription.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_state_topic_subscription.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Environment:
@@ -467,7 +467,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_split_batch.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_split_batch.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -481,7 +481,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_prepare_batch.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_prepare_batch.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -494,7 +494,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_upload_result.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_upload_result.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
       Layers:
@@ -508,7 +508,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_batch_anomaly_detection.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_batch_anomaly_detection.zip'
       MemorySize: 2048
       Timeout: 600
       Role: !GetAtt 'RunLambdaRole.Arn'
@@ -522,7 +522,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_crawler_trigger_glue_crawler.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_crawler_trigger_glue_crawler.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
 
@@ -533,7 +533,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_crawler_get_glue_crawler_state.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_crawler_get_glue_crawler_state.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
 
@@ -544,7 +544,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/ml_pipeline_has_endpoint.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/ml_pipeline_has_endpoint.zip'
       Handler: app.lambda_handler
       Role: !GetAtt 'RunLambdaRole.Arn'
 
@@ -559,7 +559,7 @@ Resources:
       ContentUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/anomaly_detection/layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/anomaly_detection/layer.zip'
       CompatibleRuntimes:
         - python3.7
       LicenseInfo: 'Available under the MIT-0 license.'
@@ -571,7 +571,7 @@ Resources:
       ContentUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/common/common-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/common/common-layer.zip'
       CompatibleRuntimes:
         - python3.7
       LicenseInfo: 'MIT'

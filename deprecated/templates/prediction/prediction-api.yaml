@@ -126,7 +126,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/get_anomaly.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/get_anomaly.zip'
       Description: Lambda function to get anomaly for certain meter
       MemorySize: 128
       Timeout: 180
@@ -148,7 +148,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/outage_info.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/outage_info.zip'
       Description: Lambda function to get outage for a certain timeframe
       MemorySize: 128
       Timeout: 180
@@ -169,7 +169,7 @@ Resources:
       CodeUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/meter_forecast.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/meter_forecast.zip'
       Description: Lambda function to get meter consumption forecast
       MemorySize: 128
       Timeout: 180
@@ -195,7 +195,7 @@ Resources:
       ContentUri:
         Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/common/common-layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/common/common-layer.zip'
       CompatibleRuntimes:
         - python3.7
       LicenseInfo: 'Available under the MIT-0 license.'

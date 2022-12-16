@@ -50,9 +50,6 @@ Resources:
   #
 
   CleanupBucketsArtifacts:
-    DependsOn:
-      - StagingDataBucket
-      - IntegratedDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt 'CleanupBucketFunction.Arn'
@@ -161,11 +158,23 @@ Resources:
                   timer.cancel()
                   cfnresponse.send(event, context, status, {}, None)
 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Data storage configuration'
+        Parameters:
+          - GlueDatabaseName
+    ParameterLabels:
+      GlueDatabaseName:
+        default: Glue database name
+
 Parameters:
   GlueDatabaseName:
     Type: String
     Default: "mda_database"
-    Description: "Name of the central Glue database."
+    Description: "Name of the central glue database."
 
 Outputs:
   StagingDataBucket:
