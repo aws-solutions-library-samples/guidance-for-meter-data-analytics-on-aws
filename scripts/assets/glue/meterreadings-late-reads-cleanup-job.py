@@ -1,4 +1,7 @@
 import sys
+import json
+import boto3
+from datetime import datetime
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
@@ -6,77 +9,90 @@ from awsglue.context import GlueContext
 from awsglue.dynamicframe import DynamicFrame
 from awsglue.job import Job
 
-
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE_STAGING","MDA_DATABASE_INTEGRATED", "STAGING_TABLE_NAME", "TARGET_TABLE_NAME","INTEGRATED_BUCKET_NAME"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME","MDA_DATABASE_INTEGRATED", "TARGET_TABLE_NAME","INTEGRATED_BUCKET_NAME"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
-job = Job(glueContext)
-job.init(args["JOB_NAME"], args)
-
 logger = glueContext.get_logger()
 
-# Script generated for node Data Catalog table
-DataCatalogtable_node1 = glueContext.create_dynamic_frame.from_catalog(
-    database=args["MDA_DATABASE_INTEGRATED"],
-    table_name=args["TARGET_TABLE_NAME"],
-    transformation_ctx="DataCatalogtable_node1",
-    additional_options = {'useS3ListImplementation': True},
-    push_down_predicate = "(reading_type = 'crrnt' AND year = '2022' AND month = '11' AND day = '29' AND hour = '22')"
-)
+# Get the service resource
+sqs = boto3.resource('sqs')
 
-mappings = [
-    ("meter_id", "string", "meter_id", "string"),
-    ("reading_value", "string", "reading_value", "double"),
-    ("reading_type", "string", "reading_type", "string"),
-    ("reading_date_time", "string", "reading_date_time", "timestamp"),
-    ("unit", "string", "unit", "string"),
-    ("obis_code", "string", "obis_code", "string"),
-    ("phase", "string", "phase", "string"),
-    ("reading_source", "string", "reading_source", "string"),
-    ("year", "string", "year", "int"),
-    ("month", "string", "month", "int"),
-    ("day", "string", "day", "int"),
-    ("hour", "string", "hour", "int"),
-]
+# Get the queue
+queue = sqs.get_queue_by_name(QueueName='late-arriving-sqs')
 
-# Script generated for node ApplyMapping
-source_map = ApplyMapping.apply(
-    frame=DataCatalogtable_node1,
-    mappings=mappings,
-    transformation_ctx="ApplyMapping_node2",
-)
+partition_list = []
 
-write_sink = glueContext.getSink(
-    path="s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
-    connection_type="s3",
-    updateBehavior="UPDATE_IN_DATABASE",
-    partitionKeys= ["reading_type", "year", "month", "day", "hour"],
-    compression="snappy",
-    enableUpdateCatalog=True,
-    transformation_ctx="write_context",
-    options = {
-        "groupFiles": "inPartition",
-        "groupSize": "104857600" # 104857600 bytes (100 MB)
-    }
-)
+for message in queue.receive_messages():
+    j = json.loads(message.body)
+    late_partition = j['responsePayload']['body']['result']['late_arriving'][0]['late_partition_time']
+    date_convert = late_partition.replace(',', '')
+    dt = datetime.strptime(date_convert, '%m/%d/%Y %H:%M:%S.%f')
+    s3_list = "year={} AND month={} AND day={} AND hour={}".format(dt.year, dt.month, dt.day, dt.hour)
 
-write_sink.setCatalogInfo(
-    catalogDatabase=args["MDA_DATABASE_INTEGRATED"], catalogTableName=args["TARGET_TABLE_NAME"]
-)
-write_sink.setFormat("glueparquet")
-write_sink.writeFrame(source_map)
+    partition_list.append(s3_list)
+    # simulating extra partitions coming through // remove this
+    partition_list.append("year=2022 AND month=12 AND day=8 AND hour=5")
 
-# Purge data older than 1 hour, after re-writing the partition. Any deleted data goes to purged folder in bucket
-glueContext.purge_table(
-    args["MDA_DATABASE_INTEGRATED"],
-    args["TARGET_TABLE_NAME"],
-    options = {
-        "partitionPredicate": "(reading_type = 'crrnt' AND year = '2022' AND month = '11' AND day = '29' AND hour = '22')",
-        "retentionPeriod": 1,
-        "manifestFilePath": "s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/purged/"
-    },
-    transformation_ctx="source_map"
-)
+print(partition_list)
 
-job.commit()
+logger.info("found " + str(len(partition_list)) + " partitions with late arriving data. Running cleanup job now.")
+
+for x in range(len(partition_list)):
+    print(partition_list[x])
+
+    job = Job(glueContext)
+    job.init(args["JOB_NAME"], args)
+
+    # Script generated for node Data Catalog table
+    DataCatalogtable_node1 = glueContext.create_dynamic_frame.from_catalog(
+        database=args["MDA_DATABASE_INTEGRATED"],
+        table_name=args["TARGET_TABLE_NAME"],
+        transformation_ctx="DataCatalogtable_node1",
+        additional_options = {'useS3ListImplementation': True},
+        push_down_predicate = "(reading_type IN ('kva', 'crrnt', 'kw', 'load', 'pf', 'vltg') AND {})".format(partition_list[x])
+    )
+
+    logger.info("processing partition: " + str(partition_list[x]))
+
+    mappings = [
+        ("meter_id", "string", "meter_id", "string"),
+        ("reading_value", "string", "reading_value", "double"),
+        ("reading_type", "string", "reading_type", "string"),
+        ("reading_date_time", "string", "reading_date_time", "timestamp"),
+        ("unit", "string", "unit", "string"),
+        ("obis_code", "string", "obis_code", "string"),
+        ("phase", "string", "phase", "string"),
+        ("reading_source", "string", "reading_source", "string"),
+        ("year", "string", "year", "int"),
+        ("month", "string", "month", "int"),
+        ("day", "string", "day", "int"),
+        ("hour", "string", "hour", "int"),
+    ]
+
+    # Script generated for node ApplyMapping
+    source_map = ApplyMapping.apply(
+        frame=DataCatalogtable_node1,
+        mappings=mappings,
+        transformation_ctx="ApplyMapping_node2",
+    )
+
+    spark.conf.set("spark.sql.sources.partitionOverwriteMode","dynamic")
+    source_map.toDF().write.mode("overwrite").format("parquet").partitionBy("reading_type", "year", "month", "day", "hour").save("s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/")
+
+    x += 1
+
+    if len(partition_list) < 1:
+        logger.info("Finished processing partitions.")
+    else:
+        logger.info("Moving to next partition...")
+
+    job.commit()
+
+logger.info("Cleanup job completed, deleting items from SQS queue...")
+
+for message in queue.receive_messages():
+    # Wipe the SQS queue
+    message.delete()
+
+logger.info("SQS queue items deleted.")
