@@ -3,29 +3,66 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: >-
   Adapter to parse and process input meter data (qs-1r18anahd)
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingRecordsStream
+          - MaxNumberOfWorkers
+          - SuggestedRangesPerWorker
+          - Adapter
+          - WorkerMemorySize
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      StagingRecordsStream:
+        default: Kinesis Stream reference
+      MaxNumberOfWorkers:
+        default: Max number of worker
+      SuggestedRangesPerWorker:
+        default: Suggested ranges per worker
+      WorkerMemorySize:
+        default: Memory size per worker
+      Adapter:
+        default: Adapter identifier
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
 Parameters:
   StagingRecordsStream:
     Type: String
+    Description: 'Stream reference that pushes data to the staging area.'
   MaxNumberOfWorkers:
     Type: Number
     Default: 70
     MinValue: 1
     MaxValue: 100
+    Description: 'Max number of workers to process files chunks.'
   SuggestedRangesPerWorker:
     Type: Number
     MinValue: 1
     Default: 3
+    Description: 'Suggested ranges per worker.'
   Adapter:
     Type: String
     Default: csv
     AllowedValues:
       - mrasco
       - csv
+    Description: 'Different adapter implementation.'
   WorkerMemorySize:
     Type: Number
     Default: 1024
     MinValue: 128
     MaxValue: 10240
+    Description: 'Memory size of each worker.'
 
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
@@ -49,15 +86,6 @@ Parameters:
       Only change this value if you customize or extend the Quick Start for your own use.
       This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
-    Type: String
-
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
-      hosted. Keep the default Region unless you are customizing the template. 
-      Changing this Region updates code references to point to a new Quick Start location. 
-      When using your own bucket, specify the Region. 
-      See https://aws-quickstart.github.io/option1.html.'
     Type: String
 
 Outputs:
@@ -111,7 +139,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/adapter_${Adapter}_inbound_file_range_extractor.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_extractor.zip'
       MemorySize: 512
       Timeout: 300
       Runtime: python3.9
@@ -138,7 +166,6 @@ Resources:
                 object:
                   key:
                     - prefix: "data/uncompressed/"
-            Enabled: true
 
   KinesisProducerDependencyLayer:
     Type: 'AWS::Serverless::LayerVersion'
@@ -148,7 +175,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/kinesis_producer/layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/kinesis_producer/layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'
@@ -161,7 +188,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/adapter_${Adapter}_inbound_file_range_worker.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_worker.zip'
       Runtime: python3.9
       MemorySize: !Ref WorkerMemorySize
       Timeout: 720
@@ -269,8 +296,6 @@ Resources:
   #
 
   CleanupInboundBucketsArtifacts:
-    DependsOn:
-      - InboundDataBucket
     Type: Custom::CopyArtifacts
     Properties:
       ServiceToken: !GetAtt CleanupInboundBucketFunction.Arn

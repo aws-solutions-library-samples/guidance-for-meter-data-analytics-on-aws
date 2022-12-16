@@ -17,6 +17,20 @@ Resources:
         ResultConfiguration:
           OutputLocation: !Sub 's3://${AthenaQueryBucket}'  
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Grafana configuration'
+        Parameters:
+          - AthenaQueryBucket
+          - AthenaWorkgroup
+    ParameterLabels:
+      AthenaQueryBucket:
+        default: Athena query bucket
+      AthenaWorkgroup:
+        default: Athena workgroup
+
 Parameters:
   AthenaQueryBucket:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'

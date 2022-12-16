@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Integration Orchestrator'
+Description: 'Integration Orchestrator. (qs-1r18anahd)'
+
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9101
+      ignore_reasons:
+        E9101: Use welcoming and inclusive language
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -16,6 +23,11 @@ Metadata:
           - SFTPSecretARN
           - ReadingsFileBaseURL
           - InboundDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
     ParameterLabels:
       OrchestratorState:
         default: 'What is the desired state of the Integration Orchestrator?'
@@ -31,32 +43,41 @@ Metadata:
         default: 'Base REST API URL for readings file requests'
       InboundDataBucket:
         default: 'S3 Bucket for storing data downloaded from HES'
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
 
 Parameters:
   OrchestratorState:
-    Description: 'Change to DISABLE at any time to stop the Integration Orchestrator'
+    Description: 'Change to DISABLE at any time to stop the Integration Orchestrator.'
     Type: String
     Default: 'ENABLED'
     AllowedValues:
       - 'ENABLED'
       - 'DISABLED'
   OrchestratorInterval:
-    Description: 'Minutes per interval, must be greater than 5'
+    Description: 'Minutes per interval, must be greater than 5.'
     Type: Number
     Default: 5
     MinValue: 5
-    ConstraintDescription: 'OrchestratorInterval must contain a numeric value greater than 5'
+    ConstraintDescription: 'OrchestratorInterval must contain a numeric value greater than 5.'
   SFTPServerAddress:
     Type: String
+    Description: 'SFTP server address.'
   SFTPUserName:
     Type: String
     Default: 'sftp-user'
+    Description: 'SFTP user name.'
   SFTPSecretARN:
     Type: String
+    Description: 'SFTP secret ARN for secrets manager.'
   ReadingsFileBaseURL:
     Type: String
+    Description: 'Readings URL endpoint.'
   InboundDataBucket:
     Type: String
+    Description: 'S3 inbound data bucket.'
 
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -80,14 +101,7 @@ Parameters:
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
-      hosted. Keep the default Region unless you are customizing the template. 
-      Changing this Region updates code references to point to a new Quick Start location. 
-      When using your own bucket, specify the Region. 
-      See https://aws-quickstart.github.io/option1.html.'
-    Type: String
+
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
@@ -600,7 +614,7 @@ Resources:
       Content:
         S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         S3Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/functions/packages/dependencies/paramiko_py3_9.zip'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/paramiko_py3_9.zip'
       LicenseInfo: 'Apache 2.0'
 
   ReadingsDownloaderStateMachine:
@@ -612,12 +626,12 @@ Resources:
       DefinitionS3Location:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/readings_downloader_state_machine.json'
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/readings_downloader_state_machine.json'
       DefinitionSubstitutions:
-        GetReadingsFileLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:$LATEST'
-        GetReadingsFileStatusLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:$LATEST'
-        SFTPDownloadLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:$LATEST'
-        UncompressFileLambdaFunction: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:$LATEST'
+        GetReadingsFileLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:$LATEST'
+        GetReadingsFileStatusLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:$LATEST'
+        SFTPDownloadLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:$LATEST'
+        UncompressFileLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:$LATEST'
   ReadingsDownloaderStateMachineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -651,10 +665,10 @@ Resources:
             Action:
               - 'lambda:InvokeFunction'
             Resource: 
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:*'
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:*'
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:*'
-                - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:*'
           - Effect: 'Allow'
             Action:
               - 's3:ListBucket'

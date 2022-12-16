@@ -15,19 +15,8 @@ project:
 tests:
   full-test-all-regions:
     parameters:
-      Adapter: mrasco
-      RedshiftUsername: awsuser
-      RedshiftUserPassword: Override_1
-      IncludeRedshift: 'True'
-      IncludeEtlAggregationWfl: 'True'
-      AdminUsername: awsuser
-      AdminUserPassword: Override_1
-      ClusterName: redshift-cluster-3
-      DBName: sampledata
-      LandingzoneTransformer: default
-      CreateLandingZoneS3Bucket: 'Yes'
-      AvailabilityZones: $[taskcat_getaz_2]
+      MeterDataGenerator: 'DISABLED'
       QSS3BucketName: $[taskcat_autobucket]
       QSS3KeyPrefix: quickstart-aws-utility-meter-data-analytics-platform/
       QSS3BucketRegion: $[taskcat_current_region]
-    template: ./templates/main.template.yaml
+    template: ./templates/workload.template.yaml
