@@ -13,7 +13,7 @@ The input adapter loads the meter reads from the external source (f.e. HES or FT
 *Connector to the HES simulator, which will be deployed with the QuickStart*
 
 .input adapter
-image::../images/input_adapter.png[Architecture,width=80%,height=80%]
+image::../docs/deployment_guide/images/input_adapter.png[Architecture,width=80%,height=80%]
 
 The input adapter implementation connects to the provided HES simulator. The different steps are explained below, depending on the source system in question these need to be adapted.
 
@@ -37,7 +37,7 @@ The QuickStart comes with two example dataflows for weather and topology data. T
 The architecture shows an example implementation, services can change depending on the requirements.
 
 .custom dataflow
-image::../images/custom_dataflow.png[Architecture,width=80%,height=80%]
+image::../docs/deployment_guide/images/custom_dataflow.png[Architecture,width=80%,height=80%]
 
 === Data partitioning
 The curated data in the *integration stage* S3 bucket is partitioned by *reading type, year, month, day, hour*, as follows:
