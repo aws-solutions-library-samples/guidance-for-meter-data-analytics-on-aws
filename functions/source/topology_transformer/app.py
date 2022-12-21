@@ -11,7 +11,7 @@ s3 = boto3.client("s3")
 
 
 def lambda_handler(event, context):
-    topology_raw_data_bucket = os.environ["raw_data_bucket"]
+    topology_staging_data_bucket = os.environ["staging_data_bucket"]
     topology_integrated_data_bucket = os.environ["integrated_data_bucket"]
 
     logging.info(event)
@@ -23,12 +23,21 @@ def lambda_handler(event, context):
         logging.info(f"Processing {object_key}")
 
         topology_content = s3.get_object(
-            Bucket=topology_raw_data_bucket, Key=object_key)["Body"].read()
+            Bucket=topology_staging_data_bucket, Key=object_key)["Body"].read()
 
         json_topo = json.loads(topology_content.decode("utf-8"))
 
         new_file_name = object_key.replace(".json", ".parquet")
         df = pd.json_normalize(json_topo)
+
+        if 'location' in object_key:
+            #the location.json contains decimal vlaues, which need to be mapped before they can be stored
+            cols = df.columns
+            for c in cols:
+                try:
+                    df[c] = pd.to_numeric(df[c])
+                except:
+                    pass
 
         os.makedirs(f"/tmp/{new_file_name}".rsplit('/', 1)[0], exist_ok=True)
         write(f"/tmp/{new_file_name}", df, compression='SNAPPY')
@@ -39,6 +48,5 @@ def lambda_handler(event, context):
             logging.error(e)
 
     return {
-        "result": f"",
         "statusCode": 200
     }

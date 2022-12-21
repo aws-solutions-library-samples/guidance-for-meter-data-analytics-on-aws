@@ -117,29 +117,118 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       Definition:
-        StartAt: StagingTopologyDataCrawler
+        StartAt: RunStagingTopologyDataCrawler
         States:
-          StagingTopologyDataCrawler:
-            Type: "Task"
+          RunStagingTopologyDataCrawler:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
             Parameters:
-              Name: !Ref StagingTopologyDataBucketCrawler
-            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
-            ResultPath: null
+              StateMachineArn: !Ref StateMachineUtilRunGlueCrawler
+              Input:
+                crawler_name: !Ref StagingTopologyDataBucketCrawler
+                detail.$: $.detail
             Next: TopologyDataTransformLambda
+          #          StagingTopologyDataCrawler:
+          #            Type: "Task"
+          #            Parameters:
+          #              Name: !Ref StagingTopologyDataBucketCrawler
+          #            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
+          #            ResultPath: null
+          #            Next: TopologyDataTransformLambda
           TopologyDataTransformLambda:
             Type: "Task"
             Parameters:
-              Payload.$: "$"
+              Payload.$: "$.Input"
               FunctionName: !Ref TopologyTransformLambda
             Resource: !Sub "arn:${AWS::Partition}:states:::lambda:invoke"
-            Next: IntegratedTopologyDataBucketCrawler
-          IntegratedTopologyDataBucketCrawler:
-            Type: "Task"
+            Next: RunIntegratedTopologyDataCrawler
+          RunIntegratedTopologyDataCrawler:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
             Parameters:
-              Name: !Ref IntegratedTopologyDataBucketCrawler
-            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
+              StateMachineArn: !Ref StateMachineUtilRunGlueCrawler
+              Input:
+                crawler_name: !Ref IntegratedTopologyDataBucketCrawler
             End: true
+#          IntegratedTopologyDataBucketCrawler:
+#            Type: "Task"
+#            Parameters:
+#              Name: !Ref IntegratedTopologyDataBucketCrawler
+#            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
+#            End: true
       Role: !GetAtt StepFunctionTopologyRole.Arn
+
+  StateMachineUtilRunGlueCrawler:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Tracing:
+        Enabled: true
+      Type: "STANDARD"
+      Name: "_run-crawler"
+      Role: !GetAtt StateMachineUtilRunGlueCrawlerRole.Arn
+      Definition:
+        Comment: A utility state machine to run a glue crawler and monitor it until completion
+        StartAt: StartCrawler
+        States:
+          StartCrawler:
+            Type: Task
+            Parameters:
+              Name.$: $.crawler_name
+            Resource: arn:aws:states:::aws-sdk:glue:startCrawler
+            Retry:
+              - ErrorEquals:
+                  - Glue.EntityNotFoundException
+                BackoffRate: 1
+                IntervalSeconds: 1
+                MaxAttempts: 0
+                Comment: EntityNotFoundException - Fail immediately
+              - ErrorEquals:
+                  - Glue.CrawlerRunningException
+                BackoffRate: 1
+                IntervalSeconds: 1
+                MaxAttempts: 0
+            Next: GetCrawler
+            ResultPath: $.response.start_crawler
+            Catch:
+              - ErrorEquals:
+                  - Glue.CrawlerRunningException
+                Next: GetCrawler
+                Comment: Crawler Already Running, just continue to monitor
+                ResultPath: $.response.start_crawler
+          GetCrawler:
+            Type: Task
+            Parameters:
+              Name.$: $.crawler_name
+            Resource: arn:aws:states:::aws-sdk:glue:getCrawler
+            ResultPath: $.response.get_crawler
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                BackoffRate: 2
+                IntervalSeconds: 1
+                MaxAttempts: 8
+            Next: Is Running?
+          Is Running?:
+            Type: Choice
+            Choices:
+              - Or:
+                  - Variable: $.response.get_crawler.Crawler.State
+                    StringEquals: RUNNING
+                  - Variable: $.response.get_crawler.Crawler.State
+                    StringEquals: STOPPING
+                Next: Wait for Crawler To Complete
+            Default: Prepare Output
+          Wait for Crawler To Complete:
+            Type: Wait
+            Seconds: 5
+            Next: GetCrawler
+          Prepare Output:
+            Type: Pass
+            End: true
+            Parameters:
+              crawler_name: $.crawler_name
+              LastCrawl.$: $.response.get_crawler.Crawler.LastCrawl
+              input: $.input
 
   TopologyStateMachineEventRule:
     Type: AWS::Events::Rule
@@ -241,6 +330,36 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource: !GetAtt TopologyTransformLambda.Arn
+        - PolicyName: start_child_ste_function
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                  - events:PutTargets
+                  - events:PutRule
+                  - events:DescribeRule
+                  - states:DescribeExecution
+                  - states:StopExecution
+                Resource:
+                  - !Ref StateMachineUtilRunGlueCrawler
+                  - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule
+
+  StateMachineUtilRunGlueCrawlerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+                - glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
         - PolicyName: invoke_crawler
           PolicyDocument:
             Version: 2012-10-17
@@ -248,6 +367,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - "glue:StartCrawler"
+                  - "glue:GetCrawler"
                 Resource:
                   - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${StagingTopologyDataBucketCrawler}"
                   - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${IntegratedTopologyDataBucketCrawler}"
@@ -322,7 +442,7 @@ Resources:
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_raw_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_staging_*"
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
       Roles:
         - !Ref GlueCrawlerRole

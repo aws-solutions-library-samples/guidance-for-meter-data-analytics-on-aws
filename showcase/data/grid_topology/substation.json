@@ -1,0 +1,44 @@
+[
+  {
+    "id": "0D489D10-DF7E-4842-BD8A-89F27A460946",
+    "name": "Evergreen Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "0E087CFB-7FC6-4664-A2A1-1820E09D5303"
+  },
+  {
+    "id": "01C3E037-C0CE-4ADA-859C-A6A2D9B29603",
+    "name": "GreenLake Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "C15F538B-C7E6-4236-9BE2-F25E118D84C1"
+  },
+  {
+    "id": "4563C4C2-DD10-4410-9F09-75E50680EA1D",
+    "name": "Ballard Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "A5F7FD89-A7D4-4E72-8A43-230ABE8CF16E"
+  },
+  {
+    "id": "FFD647D2-89FA-4AAA-B394-783F5AAF0DDC",
+    "name": "Denny Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "3B46E6D9-4025-4471-B86C-C57B6A0AE90A"
+  },
+  {
+    "id": "CEFE063E-B48F-41B9-B0C1-BAA3819429EA",
+    "name": "Sodo Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "7AA603A3-5147-4E05-865D-13147D0BF05E"
+  },
+  {
+    "id": "A6FA0CE9-4073-4624-9E96-F1009E9D5A28",
+    "name": "Rainier Substation",
+    "status": "online",
+    "gridId": "DBEF1846-1F73-4421-BD8B-846337C75266",
+    "locationId": "12762BAB-CE3C-4AB9-84A2-40842591E8AB"
+  }
+]
