@@ -68,12 +68,12 @@ Resources:
       SourceBucket: !Ref QSS3BucketName
       Prefix: !Sub '${QSS3KeyPrefix}showcase/data/grid_topology/'
       Objects:
-        - distribution_access_point.json
-        - distribution_point.json
-        - location.json
+        - distribution_transformer.json
         - power_grid.json
-        - service_location.json
+        - service_transformer.json
         - smart_meter.json
+        - location.json
+        - substation.json
         - voltage_control_zone.json
 
   CopyGridTopologyRole:

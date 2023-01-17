@@ -27,6 +27,7 @@ worker_memory = int(os.environ['worker_memory'])
 sqs = boto3.client('sqs')
 
 def lambda_handler(event, context):
+    print(event)
     event_time = event['time'].replace('T', ' ').replace('Z', '')
     try:
         bucket = event['detail']['bucket']['name']
@@ -39,6 +40,7 @@ def lambda_handler(event, context):
         chunks = []
         start_range_bytes = 0
         end_range_bytes = min(chunk_size, file_size)
+        print(f"File Size: {file_size}, Chunk Size: {chunk_size}, End Range Bytes: {end_range_bytes}")
         while start_range_bytes < file_size:
             chunks.append({
                 "bucket": bucket,
@@ -49,6 +51,7 @@ def lambda_handler(event, context):
             })
             start_range_bytes = end_range_bytes
             end_range_bytes = end_range_bytes + min(chunk_size, file_size - end_range_bytes)
+            print(f"Start Range Bytes: {start_range_bytes}, End Range Bytes: {end_range_bytes}")
 
         if not chunks:
             chunks.append({

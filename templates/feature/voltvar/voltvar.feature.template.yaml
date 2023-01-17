@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys VoltVar feature infrastructure. (qs-1r18anahd)"
+
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9007
+        - EIAMPolicyActionWildcard
+        - EValidateIAMRuleExclusions
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+
+Globals:
+  Function:
+    Runtime: python3.9
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+
+
+
+Resources:
+  VoltVarTimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: "VVODatabase"
+
+  VoltVarTimestreamTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      TableName: "VVOTable"
+      DatabaseName: !Ref VoltVarTimestreamDatabase
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: "24"
+        MagneticStoreRetentionPeriodInDays: "365"
+
+  VoltVarInputSelector:
+    Type: AWS::Serverless::Function
+    Description: Select service transformer IDs which should be used for VoltVar calculation
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_input.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:21"
+      Environment:
+        Variables:
+          volt_var_input_queue: !GetAtt VoltVarInputQueue.QueueName
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt VoltVarInputQueue.QueueName
+      #Events: Add trigger once an hour
+
+  VoltVarAvgVoltagePerTransformerMeterGroup:
+    Type: AWS::Serverless::Function
+    Description: Calculates avg voltage per transformer meter group, and writes results to SQS
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_avg_voltage.zip'
+      Timeout: 300
+      MemorySize: 256
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:us-east-1:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+        - !Sub "arn:${AWS::Partition}:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:21"
+      Environment:
+        Variables:
+          volt_var_calculation_queue: !GetAtt VoltVarCalculationQueue.QueueName
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt VoltVarCalculationQueue.QueueName
+        - SQSPollerPolicy:
+            QueueName: !GetAtt VoltVarInputQueue.QueueName
+      Events:
+        Batch:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt VoltVarInputQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
+  VoltVarCalculation:
+    Type: AWS::Serverless::Function
+    Description: Calculates VoltVar optimizations
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_calculator.zip'
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          timestream_db_name: !Ref VoltVarTimestreamDatabase
+          timestream_table_name: !Ref VoltVarTimestreamTable
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt VoltVarCalculationQueue.QueueName
+      Events:
+        Batch:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt VoltVarCalculationQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
+  PyathenaDependencyLayer:
+    Type: 'AWS::Serverless::LayerVersion'
+    Properties:
+      LayerName: !Sub "topology-transform-lambda-layer-${AWS::Region}"
+      Description: Dependencies for topology transform lambda
+      ContentUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/pyathena_2_19_layer.zip'
+      CompatibleRuntimes:
+        - python3.9
+      LicenseInfo: 'Available under the MIT-0 license.'
+
+  VoltVarInputDLQ:
+    Type: AWS::SQS::Queue
+
+  VoltVarCalculationDLQ:
+    Type: AWS::SQS::Queue
+
+  VoltVarInputQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 1800 # Fn timeout 5min * 6
+      RedrivePolicy:
+        maxReceiveCount: 2
+        deadLetterTargetArn: !GetAtt VoltVarInputDLQ.Arn
+
+  VoltVarCalculationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 180 # Fn timeout 30sec * 6
+      RedrivePolicy:
+        maxReceiveCount: 2
+        deadLetterTargetArn: !GetAtt VoltVarCalculationDLQ.Arn
