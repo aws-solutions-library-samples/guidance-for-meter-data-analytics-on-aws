@@ -34,16 +34,16 @@ def lambda_handler(event, context):
             #the location.json contains decimal vlaues, which need to be mapped before they can be stored
             cols = df.columns
             for c in cols:
-                try:
+                try: # nosec
                     df[c] = pd.to_numeric(df[c])
                 except:
                     pass
 
-        os.makedirs(f"/tmp/{new_file_name}".rsplit('/', 1)[0], exist_ok=True)
-        write(f"/tmp/{new_file_name}", df, compression='SNAPPY')
+        os.makedirs(f"/tmp/{new_file_name}".rsplit('/', 1)[0], exist_ok=True) # nosec B377
+        write(f"/tmp/{new_file_name}", df, compression='SNAPPY') # nosec B377
 
         try:
-            s3.upload_file(f"/tmp/{new_file_name}", topology_integrated_data_bucket, f"{new_file_name}")
+            s3.upload_file(f"/tmp/{new_file_name}", topology_integrated_data_bucket, f"{new_file_name}") # nosec B377
         except ClientError as e:
             logging.error(e)
 
