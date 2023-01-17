@@ -4,6 +4,10 @@ Description: "Deploys VoltVar feature infrastructure. (qs-1r18anahd)"
 
 
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9007
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -50,6 +54,8 @@ Globals:
     Environment:
       Variables:
         LOG_LEVEL: INFO
+
+
 
 Resources:
   VoltVarTimestreamDatabase:
