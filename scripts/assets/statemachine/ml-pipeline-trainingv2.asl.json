@@ -131,7 +131,6 @@
           }
         },
         "ResultPath": "$.HasEndpoints",
-        "Type": "Task",
         "Next": "DoesEndpointExist"
       },
       "DoesEndpointExist": {
