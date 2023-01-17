@@ -168,6 +168,22 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
+#  VoltVarFeatureStack:
+#    Type: 'AWS::CloudFormation::Stack'
+#    Properties:
+#      TemplateURL: !Sub
+#        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/voltvar/voltvar.feature.template.yaml'
+#        - S3Region:
+#            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+#          S3Bucket:
+#            !If [
+#              UsingDefaultBucket,
+#              !Sub '${QSS3BucketName}-${AWS::Region}',
+#              !Ref QSS3BucketName,
+#            ]
+#      Parameters:
+#        QSS3BucketName: !Ref QSS3BucketName
+#        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
 Outputs:
   StackName:
@@ -187,8 +203,8 @@ Parameters:
       - 'ENABLED'
       - 'DISABLED'
     Description:
-      Enable or disable the meter simulator. If disabled the simulation stack will NOT be deployed. 
-      If enabled the meter generator as well as HES simulator will be deployed, and both start to generate meter reads immediately. 
+      Enable or disable the meter simulator. If disabled the simulation stack will NOT be deployed.
+      If enabled the meter generator as well as HES simulator will be deployed, and both start to generate meter reads immediately.
       (additional costs can occur).
     Type: String
   GenerationInterval:
