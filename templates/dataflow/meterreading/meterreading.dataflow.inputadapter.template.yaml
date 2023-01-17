@@ -144,6 +144,8 @@ Resources:
       Timeout: 300
       Runtime: python3.9
       Role: !GetAtt 'RunRangeExtractorLambdaRole.Arn'
+      Layers:
+        - !Sub "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
         Variables:
           range_queue_url: !Ref InboundFileRangeQueue
@@ -195,6 +197,7 @@ Resources:
       Role: !GetAtt RunRangeWorkerLambdaRole.Arn
       Layers:
         - !Ref KinesisProducerDependencyLayer
+        - !Sub "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
         Variables:
           staging_record_stream: !Ref StagingRecordsStream
