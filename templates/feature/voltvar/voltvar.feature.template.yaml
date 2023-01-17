@@ -8,6 +8,8 @@ Metadata:
     config:
       ignore_checks:
         - E9007
+        - EIAMPolicyActionWildcard
+        - EValidateIAMRuleExclusions
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:

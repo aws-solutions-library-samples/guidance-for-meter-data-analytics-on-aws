@@ -13,6 +13,8 @@ Install and run [Taskcat](https://github.com/aws-ia/taskcat)
 ### CFN Lint
 Install and run [CFN Lint](https://github.com/aws-cloudformation/cfn-lint) + [Custom RuleSet](https://github.com/aws-quickstart/qs-cfn-lint-rules)
 
+`cfn-lint templates/**/*.yaml -a ../qs-cfn-lint-rules/qs_cfn_lint_rules/ > cfn-lint_output.txt`
+
 ## Customized deployment
 
 With this instruction you will be able to deploy a customized built of the quickstart to your own account.
@@ -75,11 +77,11 @@ Adjust the following template and store it besides the `apply-script.sh` as `sta
    },
    {
       "ParameterKey":"GenerationInterval",
-      "ParameterValue":"5"
+      "ParameterValue":"15"
    },
    {
       "ParameterKey":"TotalDevices",
-      "ParameterValue":"5000000"
+      "ParameterValue":"5000"
    }
 ]
 ```
