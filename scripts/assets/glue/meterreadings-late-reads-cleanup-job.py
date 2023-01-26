@@ -31,8 +31,6 @@ for message in queue.receive_messages():
     s3_list = "year={} AND month={} AND day={} AND hour={}".format(dt.year, dt.month, dt.day, dt.hour)
 
     partition_list.append(s3_list)
-    # simulating extra partitions coming through // remove this
-    partition_list.append("year=2022 AND month=12 AND day=8 AND hour=5")
 
 print(partition_list)
 
@@ -50,7 +48,7 @@ for x in range(len(partition_list)):
         table_name=args["TARGET_TABLE_NAME"],
         transformation_ctx="DataCatalogtable_node1",
         additional_options = {'useS3ListImplementation': True},
-        push_down_predicate = "(reading_type IN ('kva', 'crrnt', 'kw', 'load', 'pf', 'vltg') AND {})".format(partition_list[x])
+        push_down_predicate = "({})".format(partition_list[x])
     )
 
     logger.info("processing partition: " + str(partition_list[x]))

@@ -1,10 +1,10 @@
 general:
   s3_regional_buckets: true
-  #auth:
-  #  default: uat
+#  auth:
+#    default: uat
 
 project:
-  name: quickstart-aws-utility-meter-data-analytics-platform
+  name: quickstart-aws-utility-meter-data-analytics-platform-v2
   owner: quickstart@amazon.com
   regions:
     - us-east-1
@@ -13,6 +13,15 @@ project:
     - eu-west-1
 
 tests:
+#  default:
+#    template: ./templates/workload.template.yaml
+#    s3_bucket: cf-mda-workshop
+#    parameters:
+#      MeterDataGenerator: 'DISABLED'
+#      QSS3BucketName: cf-mda-workshop
+#      QSS3KeyPrefix: temp/
+#      QSS3BucketRegion: eu-east-1
+
   full-test-all-regions:
     parameters:
       MeterDataGenerator: 'DISABLED'
