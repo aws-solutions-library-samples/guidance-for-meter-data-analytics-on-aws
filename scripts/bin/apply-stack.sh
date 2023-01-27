@@ -13,7 +13,7 @@ if ! aws cloudformation describe-stacks --region $REGION --stack-name $STACK_NAM
   echo -e "\nStack does not exist, creating ..."
   aws cloudformation create-stack --stack-name $STACK_NAME \
                                 --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
-                                --template-body file://../../templates/workload.template.yaml \
+                                --template-body file://../../templates/work-load.template.yaml \
                                 --parameters file://$PARAMETER_FILE \
                                 --region $REGION
 
@@ -28,7 +28,7 @@ else
   update_output=$(
   aws cloudformation update-stack --stack-name $STACK_NAME \
                                 --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
-                                --template-body file://../../templates/workload.template.yaml \
+                                --template-body file://../../templates/work-load.template.yaml \
                                 --parameters file://$PARAMETER_FILE \
                                 --region $REGION \
                                 2>&1)

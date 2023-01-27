@@ -6,7 +6,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 import pandas as pd
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE_STAGING", "STAGING_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE_STAGING", "MDA_DATABASE_INTEGRATED", "STAGING_TABLE_NAME", "TARGET_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
@@ -47,19 +47,39 @@ def parse_date(df):
 
 CustomMapping_node3 = Map.apply(frame = ApplyMapping_node2 , f = parse_date, transformation_ctx = "custommapping1")
 
-# Script generated for node S3 bucket
-S3bucket_node3 = glueContext.write_dynamic_frame.from_options(
-    frame=ApplyMapping_node2,
+# # Script generated for node S3 bucket
+# S3bucket_node3 = glueContext.write_dynamic_frame.from_options(
+#     frame=ApplyMapping_node2,
+#     connection_type="s3",
+#     format="glueparquet",
+#     connection_options={
+#         "path": "s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
+#         "partitionKeys": ["reading_type", "year", "month", "day", "hour"],
+#         "groupFiles": "inPartition",
+#         "groupSize": "104857600" # 104857600 bytes (100 MB)
+#     },
+#     format_options={"compression": "snappy"},
+#     transformation_ctx="S3bucket_node3",
+# )
+
+write_sink = glueContext.getSink(
+    path="s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
     connection_type="s3",
-    format="glueparquet",
-    connection_options={
-        "path": "s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
-        "partitionKeys": ["reading_type", "year", "month", "day", "hour"],
+    updateBehavior="UPDATE_IN_DATABASE",
+    partitionKeys= ["reading_type", "year", "month", "day", "hour"],
+    compression="snappy",
+    enableUpdateCatalog=True,
+    transformation_ctx="write_sink",
+    options = {
         "groupFiles": "inPartition",
         "groupSize": "104857600" # 104857600 bytes (100 MB)
-    },
-    format_options={"compression": "snappy"},
-    transformation_ctx="S3bucket_node3",
+    }
 )
+
+write_sink.setCatalogInfo(
+    catalogDatabase=args["MDA_DATABASE_INTEGRATED"], catalogTableName=args["TARGET_TABLE_NAME"]
+)
+write_sink.setFormat("glueparquet")
+write_sink.writeFrame(ApplyMapping_node2)
 
 job.commit()
