@@ -139,7 +139,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_extractor.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_extractor/lambda.zip'
       MemorySize: 512
       Timeout: 300
       Runtime: python3.9
@@ -190,7 +190,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_worker.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_worker/lambda.zip'
       Runtime: python3.9
       MemorySize: !Ref WorkerMemorySize
       Timeout: 720

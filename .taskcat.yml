@@ -6,6 +6,8 @@ general:
 project:
   name: quickstart-aws-utility-meter-data-analytics-platform-v2
   owner: quickstart@amazon.com
+  lambda_source_path: functions/source
+  lambda_zip_path: functions/packages
   regions:
     - us-east-1
     - us-east-2
