@@ -10,5 +10,5 @@ venv
 **/.aws-sam/
 **/samconfig.toml
 scripts/bin/stack-parameter*
-functions/packages/*.zip
+functions/packages/*
 cfn-lint_output.txt

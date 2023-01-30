@@ -82,7 +82,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_input.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_input/lambda.zip'
       Timeout: 120
       MemorySize: 128
       Layers:
@@ -104,7 +104,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_avg_voltage.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_avg_voltage/lambda.zip'
       Timeout: 300
       MemorySize: 256
       Layers:
@@ -135,7 +135,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_calculator.zip'
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_calculator/lambda.zip'
       Timeout: 30
       MemorySize: 128
       Environment:
