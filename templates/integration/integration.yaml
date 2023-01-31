@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creates glue S3 buckets and upload scripts to it. (qs-1r18anahd)"
+Resources:
+  IntegrationEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: "MDAIntegrationEventBus"
+
+Outputs:
+  IntegrationEventBus:
+      Value: !Ref IntegrationEventBus

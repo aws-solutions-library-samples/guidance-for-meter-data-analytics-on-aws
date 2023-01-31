@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys staging ingestion pipeline for weather data. (qs-1r18anahd)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Weather dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'S3 bucket to store staging data.'
+
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+
+Resources:
+  RunLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: s3_write_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:PutObjectAcl"
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}/*'
+
+
+  InvokeLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: invoke_lambda_role
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                  - "lambda:InvokeAsync"
+                Resource:
+                  - !GetAtt LoadWeatherData.Arn
+
+  LoadWeatherData:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/weather_load/lambda.zip'
+      Description: Lambda function to load weather data on a regular schedule
+      MemorySize: 512
+      Timeout: 300
+      Runtime: python3.9
+      Role: !GetAtt 'RunLambdaRole.Arn'
+      Layers:
+        - !Ref DependencyLayer
+      Environment:
+        Variables:
+          staging_data_bucket: !Ref StagingDataBucket
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 1 * * ? *)'
+            Name: 'WeatherLoadTrigger'
+            Description: Loads the latest weather information every night at 1
+            Enabled: true
+
+  DependencyLayer:
+    Type: 'AWS::Serverless::LayerVersion'
+    Properties:
+      LayerName: !Sub "weather-load-lambda-layer-${AWS::Region}"
+      Description: Dependencies for weather load lambda
+      ContentUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/weather/weather-load-layer.zip'
+      CompatibleRuntimes:
+        - python3.9
+      LicenseInfo: 'Available under the MIT-0 license.'
+
+  #
+  #
+  #
+
+  TriggerInitialWeatherLoadLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt InvokeLambdaRole.Arn
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import json
+          import boto3
+          import cfnresponse
+          import logging
+
+          lambda_client = boto3.client('lambda')
+
+          def lambda_handler(event, context):
+              logging.info("Received event: " + json.dumps(event, indent=2))
+              responseData={}
+              responseStatus = cfnresponse.SUCCESS
+              try:
+                  if event['RequestType'] == 'Delete':
+                      logging.info("Request Type:",event['RequestType'])
+                  elif event['RequestType'] == 'Create':
+                      logging.info("Request Type:",event['RequestType'])
+                      LambdaArn=event['ResourceProperties']['LambdaArn']
+
+                      inputParams = {
+                          "initial": True
+                      }
+
+                      lambda_client.invoke(
+                        FunctionName = LambdaArn,
+                        InvocationType = 'Event',
+                        Payload = json.dumps(inputParams)
+                      )
+              except Exception as e:
+                  logging.critical(e, exc_info=True)
+                  responseStatus = cfnresponse.FAILED
+                  responseData = {'Failure': 'Something bad happened.'}
+          
+              cfnresponse.send(event, context, responseStatus, responseData, None)
+
+      Runtime: python3.9
+      Timeout: 10
+
+  LambdaWeatherTrigger:
+    Type: 'Custom::LambdaWeatherTrigger'
+    Properties:
+      ServiceToken: !GetAtt TriggerInitialWeatherLoadLambdaFunction.Arn
+      LambdaArn: !GetAtt LoadWeatherData.Arn

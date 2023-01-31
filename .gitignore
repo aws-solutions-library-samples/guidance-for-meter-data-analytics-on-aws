@@ -1,0 +1,14 @@
+meter-data/data/
+taskcat_outputs
+.taskcat
+.DS_STORE
+*.iml
+.idea
+venv
+.venv
+
+**/.aws-sam/
+**/samconfig.toml
+scripts/bin/stack-parameter*
+functions/packages/*
+cfn-lint_output.txt

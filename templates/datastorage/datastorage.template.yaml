@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys data common storage infrastructure. (qs-1r18anahd)"
+
+Resources:
+  StagingDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  IntegratedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+
+  GlueStagingDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub "${GlueDatabaseName}_staging"
+
+  GlueIntegratedDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub "${GlueDatabaseName}_integrated"
+
+  #
+  # Cleanup Scripts
+  # Empty Buckets and remove versions
+  #
+
+  CleanupBucketsArtifacts:
+    Type: Custom::CopyArtifacts
+    Properties:
+      ServiceToken: !GetAtt 'CleanupBucketFunction.Arn'
+      Buckets:
+        - !Ref StagingDataBucket
+        - !Ref IntegratedDataBucket
+
+  CleanupBucketsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: lambda-cleanup-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjects
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAttributes
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - s3:GetBucketVersioning
+                  - s3:GetBucketVersion
+                  - s3:ListObjectVersionsing
+                  - s3:ListObjectVersions
+                  - s3:DeleteObjectVersion
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
+
+  CleanupBucketFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Cleans objects from S3 buckets (incl versions)
+      Handler: index.handler
+      Runtime: python3.9
+      Role: !GetAtt CleanupBucketsRole.Arn
+      Timeout: 600
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+          logging.getLogger().setLevel(logging.INFO)
+          s3_resource = boto3.resource('s3')
+          def bucket_exists(bucket):
+              try:
+                  s3_resource.meta.client.head_bucket(Bucket=bucket)
+                  return True
+              except Exception as e:
+                  logging.info('Bucket {} does not exist'.format(bucket))
+                  return False
+          
+          def delete_objects(buckets):
+              for bucket in buckets:
+                  if(bucket_exists(bucket)):
+                      logging.info(f"Cleaning bucket: {bucket}")
+                      s3_bucket = s3_resource.Bucket(bucket)
+                      bucket_versioning = s3_resource.BucketVersioning(bucket)
+                      if bucket_versioning.status == 'Enabled':
+                        logging.info(f"Bucket [{bucket}] has versioning enabled, deleting all versions.")
+                        s3_bucket.object_versions.delete()
+                      else:
+                        s3_bucket.objects.all().delete()
+          
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          
+          def handler(event, context):
+              # make sure we send a failure to CloudFormation if the function
+              # is going to timeout
+              timer = threading.Timer((context.get_remaining_time_in_millis()
+                        / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+          
+              logging.info('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  buckets = event['ResourceProperties']['Buckets']
+                  logging.info(f"Following buckets will be cleaned: {buckets}")
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(buckets)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Data storage configuration'
+        Parameters:
+          - GlueDatabaseName
+    ParameterLabels:
+      GlueDatabaseName:
+        default: Glue database name
+
+Parameters:
+  GlueDatabaseName:
+    Type: String
+    Default: "mda_database"
+    Description: "Name of the central glue database."
+
+Outputs:
+  StagingDataBucket:
+    Value: !Ref StagingDataBucket
+    Description: S3 Bucket that contains the staging data.
+  IntegratedDataBucket:
+    Value: !Ref IntegratedDataBucket
+    Description: S3 Bucket that contains the integrated data.
+  GlueStagingDatabase:
+    Value: !Ref GlueStagingDatabase
+    Description: The central Glue Staging Database
+  GlueIntegratedDatabase:
+    Value: !Ref GlueIntegratedDatabase
+    Description: The central Glue Prepared Database

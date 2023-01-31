@@ -1,0 +1,449 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Topology dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      IntegratedDataBucket:
+        default: S3 integration data bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script S3 bucket
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'S3 bucket to store staging data.'
+  IntegratedDataBucket:
+    Type: String
+    Description: 'S3 bucket to store integration data.'
+  GlueStagingDatabase:
+    Type: String
+    Description: 'Glue staging database.'
+  GlueIntegratedDatabase:
+    Type: String
+    Description: 'Glue integration database.'
+  MdaGlueScriptBucket:
+    Type: String
+    Description: 'Glue script bucket.'
+
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Resources:
+
+  TopologyTransformLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}functions/packages/topology_transformer/lambda.zip'
+      Description: Lambda function to transform topology data
+      MemorySize: 512
+      Timeout: 240
+      Runtime: python3.9
+      Role: !GetAtt 'RunLambdaRole.Arn'
+      Layers:
+        - !Ref TopologyDependencyLayer
+      Environment:
+        Variables:
+          staging_data_bucket: !Ref StagingDataBucket
+          integrated_data_bucket: !Ref IntegratedDataBucket
+
+  TopologyDependencyLayer:
+    Type: 'AWS::Serverless::LayerVersion'
+    Properties:
+      LayerName: !Sub "topology-transform-lambda-layer-${AWS::Region}"
+      Description: Dependencies for topology transform lambda
+      ContentUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/topology/topology-transformer-layer.zip'
+      CompatibleRuntimes:
+        - python3.9
+      LicenseInfo: 'Available under the MIT-0 license.'
+
+  TopologyStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        StartAt: RunStagingTopologyDataCrawler
+        States:
+          RunStagingTopologyDataCrawler:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
+            Parameters:
+              StateMachineArn: !Ref StateMachineUtilRunGlueCrawler
+              Input:
+                crawler_name: !Ref StagingTopologyDataBucketCrawler
+                detail.$: $.detail
+            Next: TopologyDataTransformLambda
+          #          StagingTopologyDataCrawler:
+          #            Type: "Task"
+          #            Parameters:
+          #              Name: !Ref StagingTopologyDataBucketCrawler
+          #            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
+          #            ResultPath: null
+          #            Next: TopologyDataTransformLambda
+          TopologyDataTransformLambda:
+            Type: "Task"
+            Parameters:
+              Payload.$: "$.Input"
+              FunctionName: !Ref TopologyTransformLambda
+            Resource: !Sub "arn:${AWS::Partition}:states:::lambda:invoke"
+            Next: RunIntegratedTopologyDataCrawler
+          RunIntegratedTopologyDataCrawler:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
+            Parameters:
+              StateMachineArn: !Ref StateMachineUtilRunGlueCrawler
+              Input:
+                crawler_name: !Ref IntegratedTopologyDataBucketCrawler
+            End: true
+#          IntegratedTopologyDataBucketCrawler:
+#            Type: "Task"
+#            Parameters:
+#              Name: !Ref IntegratedTopologyDataBucketCrawler
+#            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startCrawler"
+#            End: true
+      Role: !GetAtt StepFunctionTopologyRole.Arn
+
+  StateMachineUtilRunGlueCrawler:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Tracing:
+        Enabled: true
+      Type: "STANDARD"
+      Name: "_run-crawler"
+      Role: !GetAtt StateMachineUtilRunGlueCrawlerRole.Arn
+      Definition:
+        Comment: A utility state machine to run a glue crawler and monitor it until completion
+        StartAt: StartCrawler
+        States:
+          StartCrawler:
+            Type: Task
+            Parameters:
+              Name.$: $.crawler_name
+            Resource: arn:aws:states:::aws-sdk:glue:startCrawler
+            Retry:
+              - ErrorEquals:
+                  - Glue.EntityNotFoundException
+                BackoffRate: 1
+                IntervalSeconds: 1
+                MaxAttempts: 0
+                Comment: EntityNotFoundException - Fail immediately
+              - ErrorEquals:
+                  - Glue.CrawlerRunningException
+                BackoffRate: 1
+                IntervalSeconds: 1
+                MaxAttempts: 0
+            Next: GetCrawler
+            ResultPath: $.response.start_crawler
+            Catch:
+              - ErrorEquals:
+                  - Glue.CrawlerRunningException
+                Next: GetCrawler
+                Comment: Crawler Already Running, just continue to monitor
+                ResultPath: $.response.start_crawler
+          GetCrawler:
+            Type: Task
+            Parameters:
+              Name.$: $.crawler_name
+            Resource: arn:aws:states:::aws-sdk:glue:getCrawler
+            ResultPath: $.response.get_crawler
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                BackoffRate: 2
+                IntervalSeconds: 1
+                MaxAttempts: 8
+            Next: Is Running?
+          Is Running?:
+            Type: Choice
+            Choices:
+              - Or:
+                  - Variable: $.response.get_crawler.Crawler.State
+                    StringEquals: RUNNING
+                  - Variable: $.response.get_crawler.Crawler.State
+                    StringEquals: STOPPING
+                Next: Wait for Crawler To Complete
+            Default: Prepare Output
+          Wait for Crawler To Complete:
+            Type: Wait
+            Seconds: 5
+            Next: GetCrawler
+          Prepare Output:
+            Type: Pass
+            End: true
+            Parameters:
+              crawler_name: $.crawler_name
+              LastCrawl.$: $.response.get_crawler.Crawler.LastCrawl
+              input: $.input
+
+  TopologyStateMachineEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Topology Data StateMachine"
+      EventPattern:
+        source:
+          - "mda.topology"
+        detail-type:
+          - "New Topology Data"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Ref TopologyStateMachine
+          Id: "state_machine_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+  #
+  # Glue Crawlers
+  #
+
+  JsonGridTopologyClassifier:
+    Type: AWS::Glue::Classifier
+    Properties:
+      JsonClassifier:
+        JsonPath: "$[*]"
+        Name: json_grid_topology_classifier
+
+  StagingTopologyDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      Classifiers:
+        - !Ref JsonGridTopologyClassifier
+      DatabaseName: !Ref GlueStagingDatabase
+      TablePrefix: topology_data_staging_
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${StagingDataBucket}/topology/"
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  IntegratedTopologyDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueIntegratedDatabase
+      TablePrefix: topology_data_integrated_
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${IntegratedDataBucket}/topology/"
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  #
+  # Iam Roles
+  #
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_state_machine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref TopologyStateMachine
+
+  StepFunctionTopologyRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+                - glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: invoke_lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: !GetAtt TopologyTransformLambda.Arn
+        - PolicyName: start_child_ste_function
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                  - events:PutTargets
+                  - events:PutRule
+                  - events:DescribeRule
+                  - states:DescribeExecution
+                  - states:StopExecution
+                Resource:
+                  - !Ref StateMachineUtilRunGlueCrawler
+                  - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule
+
+  StateMachineUtilRunGlueCrawlerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+                - glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: invoke_crawler
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "glue:StartCrawler"
+                  - "glue:GetCrawler"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${StagingTopologyDataBucketCrawler}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${IntegratedTopologyDataBucketCrawler}"
+
+  GlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSGlueServiceRole"
+
+  RunLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+
+  S3TopologyDataBucketAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-glue-weatherdata-bucket-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
+          - Effect: Allow
+            Action:
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+              - 'glue:BatchCreatePartition'
+              - 'glue:BatchGetPartition'
+              - 'glue:BatchUpdatePartition'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/topology_data_staging_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
+      Roles:
+        - !Ref GlueCrawlerRole
+        - !Ref RunLambdaRole

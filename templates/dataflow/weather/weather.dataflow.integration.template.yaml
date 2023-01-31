@@ -1,0 +1,267 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys the data weather cataloging workflow. (qs-1r18anahd)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Weather dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      IntegratedDataBucket:
+        default: S3 integration data bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script S3 bucket
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'S3 bucket to store staging data.'
+  IntegratedDataBucket:
+    Type: String
+    Description: 'S3 bucket to store integration data.'
+  GlueStagingDatabase:
+    Type: String
+    Description: 'Glue staging database.'
+  GlueIntegratedDatabase:
+    Type: String
+    Description: 'Glue integration database.'
+  MdaGlueScriptBucket:
+    Type: String
+    Description: 'Glue script bucket.'
+
+Resources:
+  #
+  # Glue Jobs
+  #
+  IntegrateWeatherDataGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: integrate-weatherdata
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/weatherdata-integration-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-s3-parquet-optimized-committer: true
+        --MDA_DATABASE: !Ref GlueStagingDatabase
+        --STAGING_TABLE_NAME: weather_data_staging_weather
+        --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
+      MaxRetries: 0
+      ExecutionProperty:
+        MaxConcurrentRuns: 2
+      GlueVersion: "3.0"
+
+  #
+  # Glue Crawlers
+  #
+  StagingWeatherDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueStagingDatabase
+      TablePrefix: weather_data_staging_
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${StagingDataBucket}/weather/"
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  IntegratedWeatherDataBucketCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueIntegratedDatabase
+      TablePrefix: weather_data_integrated_
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${IntegratedDataBucket}/weather/"
+      SchemaChangePolicy:
+        UpdateBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+
+  #
+  # Glue Workflow
+  #
+  WeatherGlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties:
+      Description: Weather Data Glue workflow to move data from staging to integrated zone.
+
+  GlueWorkflowTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Actions:
+        - CrawlerName: !Ref StagingWeatherDataBucketCrawler
+      Type: EVENT
+      Description: "A on demand trigger for the glue workflow."
+      WorkflowName: !Ref WeatherGlueWorkflow
+
+  IntegrationJobTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Type: "CONDITIONAL"
+      StartOnCreation: true
+      WorkflowName: !Ref WeatherGlueWorkflow
+      Actions:
+        - JobName: !Ref IntegrateWeatherDataGlueJob
+      Predicate:
+        Conditions:
+          - LogicalOperator: "EQUALS"
+            CrawlerName: !Ref StagingWeatherDataBucketCrawler
+            CrawlState: "SUCCEEDED"
+
+  IntegratedDataBucketCrawlerGlueTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Actions:
+        - CrawlerName: !Ref IntegratedWeatherDataBucketCrawler
+      Type: "CONDITIONAL"
+      StartOnCreation: true
+      WorkflowName: !Ref WeatherGlueWorkflow
+      Predicate:
+        Conditions:
+          - LogicalOperator: "EQUALS"
+            JobName: !Ref IntegrateWeatherDataGlueJob
+            State: "SUCCEEDED"
+
+  GlueWorkflowEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Weather Glue Workflow Trigger"
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref StagingDataBucket
+          object:
+            key:
+              - prefix: "weather/"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${WeatherGlueWorkflow}"
+          Id: "weather_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+  #
+  # Iam Roles
+  #
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "glue:notifyEvent"
+                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${WeatherGlueWorkflow}"
+  GlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSGlueServiceRole"
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  S3WeatherDataBucketAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-glue-weatherdata-bucket-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
+          - Effect: Allow
+            Action:
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+              - 'glue:BatchCreatePartition'
+              - 'glue:BatchGetPartition'
+              - 'glue:BatchUpdatePartition'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/weather_data_staging_*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/weather_data_integrated_*"
+      Roles:
+        - !Ref GlueJobRole
+        - !Ref GlueCrawlerRole

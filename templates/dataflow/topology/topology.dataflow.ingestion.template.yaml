@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys topology ingestion pipeline for grid topology data. (qs-1r18anahd)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Topology dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      StagingDataBucket:
+        default: S3 staging data bucket
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'S3 bucket to store staging data.'
+
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+
+
+Resources:
+
+  #
+  # Copy GridTopology showcase data, copy on deployment
+  # Initial load fires an event to trigger integration pipeline
+  #
+
+  CopyGridTopologyArtifacts:
+    Type: Custom::CopyArtifacts
+    Properties:
+      ServiceToken: !GetAtt 'CopyGridTopologyFunction.Arn'
+      DestBucket: !Ref StagingDataBucket
+      DestPrefix: 'topology/'
+      SourceBucket: !Ref QSS3BucketName
+      Prefix: !Sub '${QSS3KeyPrefix}showcase/data/grid_topology/'
+      Objects:
+        - distribution_transformer.json
+        - power_grid.json
+        - service_transformer.json
+        - smart_meter.json
+        - location.json
+        - substation.json
+        - voltage_control_zone.json
+
+  CopyGridTopologyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: lambda-grid-topology-copier
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default'
+
+
+  CopyGridTopologyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies GridTopology data from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python3.9
+      Role: !GetAtt CopyGridTopologyRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+          logging.getLogger().setLevel(logging.INFO)
+          
+          s3 = boto3.client('s3')
+          events = boto3.client('events')
+          def copy_objects(source_bucket, dest_bucket, prefix, dest_prefix, objects):
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  # use filename as subfolder to separate the different grid components
+                  sub_folder = o.replace(".json","")
+                  dest_key = f"{dest_prefix}{sub_folder}/{o}"
+                  
+                  logging.info('copy_source: %s' % copy_source)
+                  logging.info('dest_bucket = %s'%dest_bucket)
+                  logging.info('key = %s' %key)
+                  logging.info('dest_key = %s' % dest_key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket,
+                        Key=dest_key)
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def send_event(dest_bucket, dest_prefix, objects):
+              keys = []
+              for o in objects:
+                sub_folder = o.replace(".json","")
+                dest_key = f"{dest_prefix}{sub_folder}/{o}"
+                keys.append(dest_key)
+              
+              detail =  {
+                'bucket': dest_bucket,
+                'objects': json.dumps(keys)
+              }
+              logging.info(detail)
+              events.put_events(
+                  Entries=[
+                      {
+                    'Source': 'mda.topology',
+                    'Resources': [
+                      f"arn:aws:s3:::{dest_bucket}"
+                    ],
+                    'DetailType': 'New Topology Data',
+                    'Detail': json.dumps(detail)
+                  }
+                      ]
+                )
+          
+          def handler(event, context):
+              logging.info('Received event: %s' % json.dumps(event))
+              # make sure we send a failure to CloudFormation if the function
+              # is going to timeout
+              timer = threading.Timer((context.get_remaining_time_in_millis()
+                        / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  dest_prefix = event['ResourceProperties']['DestPrefix']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      logging.info(f"{dest_bucket} will be cleaned by datastorage stack.")
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, dest_prefix, objects)
+                      send_event(dest_bucket, dest_prefix, objects)
+          
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
