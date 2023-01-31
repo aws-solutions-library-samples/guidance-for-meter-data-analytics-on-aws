@@ -1,0 +1,24 @@
+general:
+  s3_regional_buckets: true
+#  auth:
+#    default: uat
+
+project:
+  name: quickstart-aws-utility-meter-data-analytics-platform-v2
+  owner: quickstart@amazon.com
+  lambda_source_path: functions/source
+  lambda_zip_path: functions/packages
+  regions:
+    - us-east-1
+    - us-east-2
+    - us-west-2
+    - eu-west-1
+
+tests:
+  full-test-all-regions:
+    parameters:
+      MeterDataGenerator: 'DISABLED'
+      QSS3BucketName: $[taskcat_autobucket]
+      QSS3KeyPrefix: quickstart-aws-utility-meter-data-analytics-platform-v2/
+      QSS3BucketRegion: $[taskcat_current_region]
+    template: ./templates/work-load.template.yaml

@@ -1,0 +1,805 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Integration Orchestrator. (qs-1r18anahd)'
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9101
+      ignore_reasons:
+        E9101: Use welcoming and inclusive language
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Orchestration configuration'
+        Parameters:
+          - OrchestratorState
+          - OrchestratorInterval
+      - Label:
+          default: 'Integration configuration'
+        Parameters:
+          - SFTPServerAddress
+          - SFTPUserName
+          - SFTPSecretARN
+          - ReadingsFileBaseURL
+          - InboundDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      OrchestratorState:
+        default: 'What is the desired state of the Integration Orchestrator?'
+      OrchestratorInterval:
+        default: 'How frequently do you want the Integration Orchestrator to run?'
+      SFTPServerAddress:
+        default: 'SFTP server address from which to retrieve readings files'
+      SFTPUserName:
+        default: 'SFTP user name for which to authenticate against SFTP server'
+      SFTPSecretARN:
+        default: 'Secrets Manager ARN containing the private key for SFTP server'
+      ReadingsFileBaseURL:
+        default: 'Base REST API URL for readings file requests'
+      InboundDataBucket:
+        default: 'S3 Bucket for storing data downloaded from HES'
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  OrchestratorState:
+    Description: 'Change to DISABLE at any time to stop the Integration Orchestrator.'
+    Type: String
+    Default: 'ENABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+  OrchestratorInterval:
+    Description: 'Minutes per interval, must be greater than 5.'
+    Type: Number
+    Default: 5
+    MinValue: 5
+    ConstraintDescription: 'OrchestratorInterval must contain a numeric value greater than 5.'
+  SFTPServerAddress:
+    Type: String
+    Description: 'SFTP server address.'
+  SFTPUserName:
+    Type: String
+    Default: 'sftp-user'
+    Description: 'SFTP user name.'
+  SFTPSecretARN:
+    Type: String
+    Description: 'SFTP secret ARN for secrets manager.'
+  ReadingsFileBaseURL:
+    Type: String
+    Description: 'Readings URL endpoint.'
+  InboundDataBucket:
+    Type: String
+    Description: 'S3 inbound data bucket.'
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Resources:
+  OrechestratorScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: !Join [ ' ', [ 'Launch', !Ref OrchestratorLambdaFunction, 'every', !Ref OrchestratorInterval, 'minutes' ] ]
+      ScheduleExpression: !Join [ '', [ 'rate(', !Ref OrchestratorInterval, ' minutes)' ] ]
+      State: !Ref OrchestratorState
+      Targets:
+        - Arn: !GetAtt OrchestratorLambdaFunction.Arn
+          Id: 'TargetFunctionV1'
+  PermissionForEventsToInvokeOrchestratorLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OrchestratorLambdaFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt OrechestratorScheduledRule.Arn
+  IntegrationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: 'integration_id'
+          AttributeType: 'S'
+        - AttributeName: 'next_eligible'
+          AttributeType: 'N'
+        - AttributeName: 'state'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'integration_id'
+          KeyType: 'HASH'
+      GlobalSecondaryIndexes: 
+        - IndexName: "state-next_eligible-index"
+          KeySchema: 
+            - AttributeName: "state"
+              KeyType: "HASH"
+            - AttributeName: "next_eligible"
+              KeyType: "RANGE"
+          Projection: 
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: "5"
+            WriteCapacityUnits: "5"
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  OrchestratorLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt OrchestratorLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 120
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref IntegrationsTable
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import os
+          import uuid
+          import json
+          import boto3
+          import decimal
+          from datetime import datetime, timezone, timedelta
+          class DecimalEncoder(json.JSONEncoder):
+            def default(self, o):
+              if isinstance(o, decimal.Decimal):
+                if o % 1 == 0:
+                  return int(o)
+                else:
+                  return float(o)
+              return super(DecimalEncoder, self).default(o)
+          def date_delta(date, interval, period):
+            start_date = datetime.fromtimestamp(date/1000)
+            if period in ['seconds', 'minutes', 'hours', 'days', 'weeks']:
+              date_delta = start_date + timedelta(**{period: int(interval)})
+              return round(date_delta.timestamp() * 1000)
+            else:
+              raise ValueError('schedule period must be seconds, minutes, hours, days, or weeks')
+          def lambda_handler(event, context):
+            try:
+              dynamodb_table = os.environ['DYNAMODB_TABLE']
+              sfn_client = boto3.client('stepfunctions')
+              dynamodb_resource = boto3.resource('dynamodb')
+              dtable = dynamodb_resource.Table(dynamodb_table)
+              now = round(datetime.now(timezone.utc).timestamp() * 1000)
+              dynamodb_response = dtable.query(
+                IndexName = "state-next_eligible-index",
+                KeyConditionExpression = "(#state = :state) AND (#next_eligible <= :next_eligible)",
+                FilterExpression = "(#enabled = :enabled)",
+                ExpressionAttributeNames = {"#state": "state", "#next_eligible": "next_eligible", "#enabled": "enabled"},
+                ExpressionAttributeValues = {":state": "idle", ":next_eligible": now, ":enabled": True}
+              )
+              for item in dynamodb_response['Items']:
+                record = json.loads(json.dumps(item, cls = DecimalEncoder))
+                # Based on current next_eligible + end_delta settings
+                #future_next_eligible = str(date_delta(date = record['next_eligible'], interval = record['frequency']['interval'], period = record['frequency']['period']))
+                # Based on now + end_delta settings
+                future_next_eligible = str(date_delta(date = now, interval = record['frequency']['interval'], period = record['frequency']['period']))
+                record['run_detail'] = {'future_next_eligible': future_next_eligible}
+                sfn_response = sfn_client.start_execution(
+                  stateMachineArn = record['integration_args']['state_machine_arn'],
+                  name = str(uuid.uuid4()),
+                  input = json.dumps(record)
+                )
+              return {'statusCode': 200, 'body': 'accepted'}
+            except Exception as e:
+              return {'statusCode': 500, 'body': str(e)}
+  OrchestratorLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${OrchestratorLambdaFunction}'
+      RetentionInDays: 90
+  OrchestratorLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  OrchestratorLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref OrchestratorLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${OrchestratorLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:Query'
+              - 'dynamodb:UpdateItem'
+            Resource:
+              - !Sub '${IntegrationsTable.Arn}'
+              - !Sub '${IntegrationsTable.Arn}/*'
+          - Effect: 'Allow'
+            Action:
+              - 'states:StartExecution'
+            Resource: !GetAtt ReadingsDownloaderStateMachine.Arn
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${OrchestratorLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${OrchestratorLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${OrchestratorLambdaFunction}:*:*'
+  GetReadingsFileLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt GetReadingsFileLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 120
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import json
+          import urllib3
+          from datetime import datetime, timedelta
+          def date_delta(date, interval, period):
+            start_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f")
+            if period in ['seconds', 'minutes', 'hours', 'days', 'weeks']:
+              date_delta = start_date + timedelta(**{period: int(interval)})
+              return date_delta.strftime("%Y-%m-%d %H:%M:%S.%f")
+            else:
+              raise ValueError('schedule period must be seconds, minutes, hours, days, or weeks')
+          def lambda_handler(event, context):
+            try:
+              start_date = event['integration_args']['start_date']
+              end_date = date_delta(date = start_date, interval = event['integration_args']['end_delta']['interval'], period = event['integration_args']['end_delta']['period'])
+              http = urllib3.PoolManager()
+              request = http.request('POST', event['integration_args']['base_url'] + '/readings/file', body = json.dumps({'start_date': start_date, 'end_date': end_date}))
+              response = json.loads(request.data.decode('utf8'))
+              if 'run_detail' not in event:
+                event['run_detail'] = {}
+              event['run_detail']['file_request_id'] = response['request_id']
+              event['run_detail']['state'] = 'file request ' + response['status']
+              event['run_detail']['end_date'] = end_date
+              return event
+            except Exception as e:
+              raise e
+
+  GetReadingsFileLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GetReadingsFileLambdaFunction}'
+      RetentionInDays: 90
+
+  GetReadingsFileLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+
+  GetReadingsFileLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref GetReadingsFileLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${GetReadingsFileLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileLambdaFunction}:*:*'
+
+  GetReadingsFileStatusLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt GetReadingsFileStatusLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 60
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref IntegrationsTable
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import os
+          import json
+          import boto3
+          import urllib3
+          def lambda_handler(event, context):
+            try:
+              http = urllib3.PoolManager()
+              request = http.request('GET', event['integration_args']['base_url'] + '/readings/file?request_id=' + event['run_detail']['file_request_id'])
+              response = json.loads(request.data.decode('utf8'))
+              event['run_detail']['state'] = 'file request ' + response['status']
+              if 'record_count' in response:
+                event['run_detail']['record_count'] = response['record_count']
+              if 'sftp_location' in response:
+                event['run_detail']['sftp_location'] = response['sftp_location']
+              return event
+            except Exception as e:
+              raise e
+
+  GetReadingsFileStatusLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GetReadingsFileStatusLambdaFunction}'
+      RetentionInDays: 90
+
+  GetReadingsFileStatusLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+
+  GetReadingsFileStatusLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref GetReadingsFileStatusLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${GetReadingsFileStatusLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileStatusLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileStatusLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${GetReadingsFileStatusLambdaFunction}:*:*'
+
+  SFTPDownloadLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt SFTPDownloadLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 10240
+      EphemeralStorage: 
+          Size: 10240
+      Timeout: 900
+      Layers:
+        - !Ref ParamikoLayer39
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import os
+          import json
+          import boto3
+          import paramiko
+          from io import BytesIO
+          from io import StringIO
+          def lambda_handler(event, context):
+            try:
+              sm_client = boto3.client('secretsmanager')
+              s3_client = boto3.client('s3')
+              s3_resource = boto3.resource('s3')
+              downloaded_file = event['run_detail']['file_request_id'] + '.csv.gz'
+              secret_value = sm_client.get_secret_value(SecretId = event['integration_args']['secret_arn'])['SecretString']
+              private_key = StringIO(secret_value)
+              ssh = paramiko.client.SSHClient()
+              ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+              rsa_key = paramiko.RSAKey.from_private_key(private_key)
+              ssh.connect(event['integration_args']['sftp_server_address'], username=event['integration_args']['sftp_user_name'], pkey=rsa_key)
+              sftp = ssh.open_sftp()
+              with BytesIO() as data:
+                sftp.getfo(event['run_detail']['sftp_location'], data)
+                data.seek(0)
+                response = s3_client.upload_fileobj(
+                  data,
+                  event['integration_args']['bucket'],
+                  event['integration_args']['landing_prefix'] + downloaded_file
+                )
+              event['run_detail']['state'] = 'file downloaded'
+              event['run_detail']['downloaded_file'] = downloaded_file
+              return event
+            except Exception as e:
+              raise e
+
+  SFTPDownloadLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${SFTPDownloadLambdaFunction}'
+      RetentionInDays: 90
+
+  SFTPDownloadLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+
+  SFTPDownloadLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref SFTPDownloadLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${SFTPDownloadLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'secretsmanager:GetSecretValue'
+            Resource: !Ref SFTPSecretARN
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjects'
+              - 's3:CreateMultipartUpload'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${SFTPDownloadLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${SFTPDownloadLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${SFTPDownloadLambdaFunction}:*:*'
+
+  UncompressFileLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt UncompressFileLambdaRole.Arn
+      Runtime: python3.9
+      Timeout: 900
+      MemorySize: 10240
+      EphemeralStorage: 
+          Size: 10240
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import gzip
+          import boto3
+          from io import BytesIO
+
+          def lambda_handler(event, context):
+            try:
+              s3_client = boto3.client('s3')
+              uncompressed_file = event['run_detail']['file_request_id'] + '.csv'
+              in_key = event['integration_args']['landing_prefix'] + event['run_detail']['downloaded_file']
+              out_key = event['integration_args']['uncompressed_prefix'] + uncompressed_file
+              s3_client.upload_fileobj(
+                Fileobj = gzip.GzipFile(
+                  None,
+                  'rb',
+                  fileobj = BytesIO(
+                    s3_client.get_object(
+                      Bucket = event['integration_args']['bucket'],
+                      Key = in_key
+                    )['Body'].read()
+                  )
+                ),
+                Bucket = event['integration_args']['bucket'],
+                Key = out_key
+              )
+              event['run_detail']['state'] = 'file uncompression completed'
+              event['run_detail']['uncompressed_file'] = uncompressed_file
+              return event
+            except Exception as e:
+              raise e
+
+  UncompressFileLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${UncompressFileLambdaFunction}'
+      RetentionInDays: 90
+
+  UncompressFileLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+
+  UncompressFileLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref UncompressFileLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${UncompressFileLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjects'
+              - 's3:CreateMultipartUpload'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${UncompressFileLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${UncompressFileLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${UncompressFileLambdaFunction}:*:*'
+
+  ParamikoLayer39:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: 'Paramiko_py3_9'
+      Description: 'Paramiko 2.12.0 (Python 3.9)'
+      CompatibleRuntimes:
+        - 'python3.9'
+      CompatibleArchitectures:
+        - 'x86_64'
+      Content:
+        S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        S3Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/paramiko_py3_9.zip'
+      LicenseInfo: 'Apache 2.0'
+
+  ReadingsDownloaderStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+      - ReadingsDownloaderStateMachinePolicy
+    Properties:
+      RoleArn: !GetAtt ReadingsDownloaderStateMachineRole.Arn
+      DefinitionS3Location:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/readings_downloader_state_machine.json'
+      DefinitionSubstitutions:
+        GetReadingsFileLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:$LATEST'
+        GetReadingsFileStatusLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:$LATEST'
+        SFTPDownloadLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:$LATEST'
+        UncompressFileLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:$LATEST'
+  ReadingsDownloaderStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - states.amazonaws.com
+        Version: '2012-10-17'
+  ReadingsDownloaderStateMachinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref ReadingsDownloaderStateMachineRole
+      PolicyName: !Sub '${AWS::Region}-${ReadingsDownloaderStateMachineRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:UpdateItem'
+            Resource: !GetAtt IntegrationsTable.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'secretsmanager:GetSecretValue'
+            Resource: !Ref SFTPSecretARN
+          - Effect: 'Allow'
+            Action:
+              - 'lambda:InvokeFunction'
+            Resource: 
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${SFTPDownloadLambdaFunction}:*'
+                - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${UncompressFileLambdaFunction}:*'
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}'
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjects'
+              - 's3:CreateMultipartUpload'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${InboundDataBucket}/*'
+  DynamoDBNewItemRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  DynamoDBNewItemPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref DynamoDBNewItemRole
+      PolicyName: !Sub '${AWS::Region}-${DynamoDBNewItemFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:PutItem'
+              - 'dynamodb:DeleteItem'
+            Resource:
+              - !Sub '${IntegrationsTable.Arn}'
+              - !Sub '${IntegrationsTable.Arn}/*'
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${DynamoDBNewItemFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${DynamoDBNewItemFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${DynamoDBNewItemFunction}:*:*'
+  DynamoDBNewItemInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    DependsOn: DynamoDBNewItemPolicy
+    Properties:
+      ServiceToken: !GetAtt DynamoDBNewItemFunction.Arn
+      ReadingsFileBaseURL: !Ref ReadingsFileBaseURL
+      SFTPSecretARN: !Ref SFTPSecretARN
+      SFTPServerAddress: !Ref SFTPServerAddress
+      SFTPUserName: !Ref SFTPUserName
+      IntergrationsTable: !Ref IntegrationsTable
+      S3Bucket: !Ref InboundDataBucket
+      StateMachineARN: !GetAtt ReadingsDownloaderStateMachine.Arn
+      IntegrationId: 'ed6dbae0-ef54-4e6d-98d2-18024eb56488'
+  DynamoDBNewItemFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt DynamoDBNewItemRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 60
+      ReservedConcurrentExecutions: 1
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import threading
+          import cfnresponse
+          from datetime import datetime, timezone, timedelta
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def lambda_handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            timer.start()
+            try:
+              dynamodb_resource = boto3.resource('dynamodb')
+              dtable = dynamodb_resource.Table(event['ResourceProperties']['IntergrationsTable'])
+              item = {
+                'integration_id': event['ResourceProperties']['IntegrationId'],
+                'enabled': True,
+                'state': 'idle',
+                'next_eligible': round((datetime.now(timezone.utc) + timedelta(**{'minutes': int(5)})).timestamp() * 1000),
+                'frequency': {'interval': 5, 'period': 'minutes'},
+                'integration_args': {
+                  'base_url': event['ResourceProperties']['ReadingsFileBaseURL'],
+                  'bucket':  event['ResourceProperties']['S3Bucket'],
+                  'landing_prefix': 'data/landing/' + event['ResourceProperties']['IntegrationId'] + '/',
+                  'uncompressed_prefix': 'data/uncompressed/' + event['ResourceProperties']['IntegrationId'] + '/',
+                  'processed_prefix': 'data/processed/' + event['ResourceProperties']['IntegrationId'] + '/',
+                  'end_delta': {'interval': 15, 'period': 'minutes'},
+                  'integrations_table': event['ResourceProperties']['IntergrationsTable'],
+                  'sftp_server_address': event['ResourceProperties']['SFTPServerAddress'],
+                  'sftp_user_name': event['ResourceProperties']['SFTPUserName'],
+                  'secret_arn': event['ResourceProperties']['SFTPSecretARN'],
+                  'state_machine_arn': event['ResourceProperties']['StateMachineARN'],
+                  'start_date': str(datetime.strftime((datetime.now(timezone.utc) - timedelta(**{'minutes': int(15)})),'%Y-%m-%d %H:%M:%S.%f'))
+                }
+              }
+              if event['RequestType'] == 'Create':
+                dynamodb_response = dtable.put_item(Item=item)
+                responseData = {'Result': 'Item Created', 'IntegrationId': event['ResourceProperties']['IntegrationId']}          
+              elif event['RequestType'] == 'Delete':
+                dynamodb_response = dtable.delete_item(Key={'integration_id': event['ResourceProperties']['IntegrationId']})
+                responseData = {'Result': 'Item Deleted', 'IntegrationId': event['ResourceProperties']['IntegrationId']}
+              else:
+                responseData = {}
+              status = cfnresponse.SUCCESS
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              responseData = {'Error': (str(e))}
+              status = cfnresponse.FAILED
+            finally:
+              timer.cancel()
+              cfnresponse.send(event, context, status, responseData, None)
+  DynamoDBNewItemLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${DynamoDBNewItemFunction}'
+      RetentionInDays: 90

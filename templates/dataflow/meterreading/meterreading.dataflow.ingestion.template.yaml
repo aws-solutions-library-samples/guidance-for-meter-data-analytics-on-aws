@@ -1,0 +1,291 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys staging streaming ingestion pipeline. (qs-1r18anahd)"
+
+Metadata:
+  cfn-lint:
+    config:
+      configure_rules:
+        RuleId: E9101
+      ignore_checks:
+        - E9101
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegrationBus
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+    ParameterLabels:
+      StagingDataBucket:
+        default: Staging S3 Bucket
+      IntegrationBus:
+        default: EventBridge integration bus
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket Region
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: S3 bucket to store integration stage data.
+  IntegrationBus:
+    Type: String
+    Description: Integration bus to use for late arriving data notifications.
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+
+Resources:
+  StagingRecordsStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: StagingRecordsStream
+      RetentionPeriodHours: 168
+      StreamModeDetails:
+        StreamMode: ON_DEMAND
+
+  StagingEventsFirehose:
+    DependsOn: DeliveryPolicy
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: StagingRecordsDeliveryStream
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt StagingRecordsStream.Arn
+        RoleARN: !GetAtt DeliveryRole.Arn
+
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+        BufferingHints:
+          IntervalInSeconds: '60'
+          SizeInMBs: '100'
+        CompressionFormat: UNCOMPRESSED
+        ErrorOutputPrefix: "errors/readings/json/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}"
+        Prefix: "readings/json/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/hour=!{partitionKeyFromQuery:hour}/"
+        DynamicPartitioningConfiguration:
+          Enabled: true
+          RetryOptions:
+            DurationInSeconds: 300
+        RoleARN: !GetAtt DeliveryRole.Arn
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  #.reading_date_time with type string and format "yyyy-MM-dd HH:mm:ss.SSS"
+                  ParameterValue: "{year:.reading_date_time[:4],month:.reading_date_time[5:7],day:.reading_date_time[8:10],hour:.reading_date_time[11:13]}"
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
+            - Type: AppendDelimiterToRecord
+              Parameters:
+                - ParameterName: Delimiter
+                  ParameterValue: "\\n"
+        S3BackupMode: Disabled
+        S3BackupConfiguration:
+          BucketARN: !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+          BufferingHints:
+            IntervalInSeconds: '60'
+            SizeInMBs: '50'
+          CompressionFormat: UNCOMPRESSED
+          RoleARN: !GetAtt DeliveryRole.Arn
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref StagingEventsFirehoseLogGroup
+          LogStreamName: !Ref StagingEventsFirehoseLogStream
+
+  StagingEventsFirehoseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+      LogGroupName: "/aws/meter_readings/staging_events_firehouse"
+
+  StagingEventsFirehoseLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref StagingEventsFirehoseLogGroup
+
+  DeliveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref 'AWS::AccountId'
+  DeliveryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firehose-delivery-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:AbortMultipartUpload'
+              - 's3:GetBucketLocation'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:PutObject'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}*"
+          - Effect: Allow
+            Action:
+              - 'kinesis:DescribeStream'
+              - 'kinesis:GetShardIterator'
+              - 'kinesis:GetRecords'
+            Resource: !GetAtt StagingRecordsStream.Arn
+      Roles:
+        - !Ref DeliveryRole
+
+  LateArrivingEventsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/late_arriving_notification/lambda.zip'
+      Description: lambda to be called on object creation to adapt objects to clean format S3
+      Environment:
+        Variables:
+          EventBus: !Ref IntegrationBus
+      Handler: 'app.lambda_handler'
+      MemorySize: 512
+      Role:
+        Fn::GetAtt:
+          - LateArrivingDataLambdaIAMRole
+          - Arn
+      Runtime: python3.9
+      Timeout: 30
+      Events:
+        Late:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - "aws.s3"
+              detail-type:
+                - "Object Created"
+              detail:
+                bucket:
+                  name:
+                    - !Ref StagingDataBucket
+                object:
+                  key:
+                    - prefix: "readings/json/"
+
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt LateArrivingEventsFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
+
+  LateArrivingDataLambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketNotification'
+                  - 's3:PutBucketNotification'
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${StagingDataBucket}'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/${IntegrationBus}'
+
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_late_arriving_lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  -  "lambda:InvokeFunction"
+                Resource: !GetAtt LateArrivingEventsFunction.Arn
+
+Outputs:
+  StagingRecordsStream:
+    Value: !Ref StagingRecordsStream
+    Description: Name of the staging record kinesis stream.
