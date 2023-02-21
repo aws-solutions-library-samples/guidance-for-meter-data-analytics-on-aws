@@ -235,7 +235,7 @@ Metadata:
       MeterDataGenerator:
         default: Meter data and HES simulator
       GenerationInterval:
-        default: Interval between meter reads
+        default: Generation interval
       TotalDevices:
         default: Number of devices
       QSS3BucketName:
