@@ -168,7 +168,7 @@ Parameters:
       Choose "ENABLED" to deploy the meter data generator and HES simulator stacks. If deployed, both start to generate meter reads immediately, which can result in additional costs.
     Type: String
   GenerationInterval:
-    Description: Reading-generation interval in minutes, minimum of five.
+    Description: Interval between meter reads in minutes, minimum of five.
     Type: Number
     Default: 5
     MinValue: 5
