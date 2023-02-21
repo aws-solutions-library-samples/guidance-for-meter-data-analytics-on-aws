@@ -14,14 +14,14 @@ As shown in <<architecture1>>, the QuickStart sets up the following:
 
 * Amazon Simple Storage Service (Amazon S3) buckets to store the following:
 ** Weather and topology data from external databases.
-** Meter data management (MDM) system and head end system (HES) data.
-** Partitioned business data.
+** Raw meter data.
+** Partitioned data.
 ** Processed data from the AWS Step Functions model training workflow.
 * AWS Lambda functions to do the following:
 ** Load and transform topology data from an external database.
 ** Process late-arriving meter data.
 ** Obtain API query results of partitioned business data and Amazon SageMaker inferences.
-* An AWS Glue crawler to transform meter data from MDM and HES systems into partitioned business data.
+* An AWS Glue crawler to transform meter data from Meter data management (MDM) system and head end system (HES) systems into partitioned data.
 * Amazon EventBridge to process and store late-arriving meter data in the correct partition.
 * AWS Glue Data Catalog for a central catalog of weather, topology, and meter data.
 * Amazon Athena to provide query results of partitioned data.
@@ -29,5 +29,5 @@ As shown in <<architecture1>>, the QuickStart sets up the following:
 ** Model training to build an ML model using partitioned business data.
 ** Batch processing of partitioned business data from AWS Glue Data Catalog and ML model data for use in forecasting.
 * SageMaker to generate energy usage inferences using the ML model.
-* Amazon API Gateway to deliver energy usage, meter outage, and forecasting query results.
+* Amazon API Gateway to manage API queries.
 
