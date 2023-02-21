@@ -149,13 +149,13 @@ Resources:
 
 Outputs:
   StackName:
-    Description: 'Stack name'
+    Description: Stack name.
     Value: !Sub '${AWS::StackName}'
   StagingDataBucket:
-    Description: S3 Bucket that contains the staging data.
+    Description: S3 bucket that contains the staging data.
     Value: !GetAtt DataStorageStack.Outputs.StagingDataBucket
   IntegratedDataBucket:
-    Description: S3 Bucket that contains the integrated data.
+    Description: S3 bucket that contains the integrated data.
     Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
@@ -170,55 +170,49 @@ Parameters:
       (additional costs can occur).
     Type: String
   GenerationInterval:
-    Description: 'Minutes per interval, must be greater than 5.'
+    Description: Interval (in minutes) between meter reads, minimum of five.
     Type: Number
     Default: 5
     MinValue: 5
-    ConstraintDescription: 'GenerationInterval must contain a numeric value greater than 5.'
+    ConstraintDescription: Interval must be at least five minutes.
   TotalDevices:
-    Description: 'Number of devices to generate readings at each interval.'
+    Description: Number of devices to generate readings at each interval.
     Type: Number
     Default: 50000
   QSS3BucketName:
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    ConstraintDescription:
-      The Quick Start bucket name can include numbers, lowercase
-      letters, uppercase letters, and hyphens (-). It cannot start or end with a
-      hyphen (-).
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
+    ConstraintDescription: >-
+      The S3 bucket name can include numbers, lowercase letters,
+      and hyphens (-), but it cannot start or end with a hyphen.
     Default: aws-quickstart
-    Description:
-      Name of the S3 bucket for your copy of the Quick Start assets.
-      Keep the default name unless you are customizing the template.
-      Changing the name updates code references to point to a new Quick
-      Start location. This name can include numbers, lowercase letters,
-      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
-      See https://aws-quickstart.github.io/option1.html.
+    Description: >-
+      Name of the S3 bucket for your copy of the deployment assets. Keep the default
+      name unless you are customizing the template. Changing the name updates code
+      references to point to a new location.
+    MinLength: 3
+    MaxLength: 63
     Type: String
-  
-  QSS3KeyPrefix:
-    AllowedPattern: '^[0-9a-zA-Z-/]*$'
-    ConstraintDescription:
-      The Quick Start S3 key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), and forward slashes (/). The prefix should
-      end with a forward slash (/).
-    Default: quickstart-aws-utility-meter-data-analytics-platform/
-    Description:
-      S3 key prefix that is used to simulate a directory for your copy of the
-      Quick Start assets. Keep the default prefix unless you are customizing
-      the template. Changing this prefix updates code references to point to
-      a new Quick Start location. This prefix can include numbers, lowercase
-      letters, uppercase letters, hyphens (-), and forward slashes (/). End with
-      a forward slash. See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
-      and https://aws-quickstart.github.io/option1.html.
-    Type: String
-  
   QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
-    hosted. Keep the default Region unless you are customizing the template. 
-    Changing this Region updates code references to point to a new Quick Start location. 
-    When using your own bucket, specify the Region. 
-    See https://aws-quickstart.github.io/option1.html.'
+    Default: us-east-1
+    Description: >-
+      AWS Region where the S3 bucket (QSS3BucketName) is hosted. Keep
+      the default Region unless you are customizing the template. Changing the Region
+      updates code references to point to a new location. When using your own bucket,
+      specify the Region.
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^([0-9a-zA-Z!-_\.\*'\(\)/]+/)*$
+    ConstraintDescription: >-
+      The S3 key prefix can include numbers, lowercase letters, uppercase letters,
+      hyphens (-), underscores (_), periods (.), asterisks (*), single quotes ('),
+      open parenthesis ((), close parenthesis ()), and forward slashes (/). End the
+      prefix with a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Description: >-
+      S3 key prefix that is used to simulate a folder for your copy of the
+      deployment assets. Keep the default prefix unless you are customizing
+      the template. Changing the prefix updates code references to point to
+      a new location.
     Type: String
 
 
@@ -228,13 +222,13 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: 'Meter data generator configuration'
+          default: Meter data generator configuration
         Parameters:
           - MeterDataGenerator
           - GenerationInterval
           - TotalDevices
       - Label:
-          default: 'AWS Quick Start configuration'
+          default: AWS Solution configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -243,12 +237,12 @@ Metadata:
       MeterDataGenerator:
         default: Enable/disable the generator
       GenerationInterval:
-        default: Interval in which new meter reads will be generated
+        default: Interval between meter reads
       TotalDevices:
         default: Number of devices
       QSS3BucketName:
-        default: Quick Start S3 bucket name
+        default: AWS Solution S3 bucket name
       QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
+        default: AWS Solution S3 key prefix
       QSS3BucketRegion:
-        default: Quick Start S3 bucket Region
+        default: AWS Solution S3 bucket Region
