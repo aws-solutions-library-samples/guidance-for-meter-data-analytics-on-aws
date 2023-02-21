@@ -165,12 +165,10 @@ Parameters:
       - 'ENABLED'
       - 'DISABLED'
     Description:
-      Enable or disable the meter simulator. If disabled the simulation stack will NOT be deployed.
-      If enabled the meter generator as well as HES simulator will be deployed, and both start to generate meter reads immediately.
-      (additional costs can occur).
+      Choose "ENABLED" to deploy the meter data generator and HES simulator stacks. If deployed, both start to generate meter reads immediately, which can result in additional costs.
     Type: String
   GenerationInterval:
-    Description: Interval (in minutes) between meter reads, minimum of five.
+    Description: Reading-generation interval in minutes, minimum of five.
     Type: Number
     Default: 5
     MinValue: 5
@@ -235,7 +233,7 @@ Metadata:
           - QSS3BucketRegion
     ParameterLabels:
       MeterDataGenerator:
-        default: Enable/disable the generator
+        default: Meter data and HES simulator
       GenerationInterval:
         default: Interval between meter reads
       TotalDevices:
