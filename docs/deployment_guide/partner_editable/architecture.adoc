@@ -1,32 +1,33 @@
 :xrefstyle: short
 
-Deploying this QuickStart with default parameters builds the following {partner-product-short-name} environment in the
+Deploying this solution with default parameters builds the following {partner-product-short-name} environment in the
 AWS Cloud.
 
 // Replace this example diagram with your own. Follow our wiki guidelines: https://w.amazon.com/bin/view/AWS_Quick_Starts/Process_for_PSAs/#HPrepareyourarchitecturediagram. Upload your source PowerPoint file to the GitHub {deployment name}/docs/images/ directory in its repository.
 
 [#architecture1]
-.QuickStart architecture for {partner-product-short-name} on AWS
+.Solution architecture for {partner-product-name} on AWS
 [link=images/architecture_diagram.png]
 image::../docs/deployment_guide/images/architecture_diagram.png[Architecture]
 
-As shown in <<architecture1>>, the QuickStart sets up the following:
+As shown in <<architecture1>>, the solution sets up the following:
 
-* An extract, transform, load (ETL) pipeline:
-** S3 buckets to store data from the meter source system. Staging and Integrated data are stored in separate S3 buckets.
-** An AWS Glue workflow:
-*** Crawlers, jobs, and triggers to crawl, transform, and convert incoming raw meter data into clean data in the desired format and partitioned business data.
-*** Data Catalog to store metadata and source information about the meter data.
-
-* Amazon EventBridge which receives an event as soon as late dater are detected on ingestion
-
-* An ML pipeline:
-** AWS Step Functions workflows:
-*** Batch processing, which uses the partitioned business data and the data from the model as a basis for forecasting.
-*** Model training, which uses the partitioned business data to build an ML model.
-** Amazon S3 for storing the processed data.
-** Amazon SageMaker for real-time forecasting of energy usage.
-
-* AWS Lambda to query the partitioned business data through Amazon Athena or invoke SageMaker to provide API query results.
-* Amazon API Gateway to deliver API query results for energy usage, anomalies, and meter outages.
+* Amazon Simple Storage Service (Amazon S3) buckets to store the following:
+** Weather and topology data from external databases.
+** Raw meter data.
+** Partitioned data.
+** Processed data from the AWS Step Functions model training workflow.
+* AWS Lambda functions to do the following:
+** Load and transform topology data from an external database.
+** Process late-arriving meter data.
+** Obtain API query results of partitioned business data and Amazon SageMaker inferences.
+* An AWS Glue crawler to transform meter data from Meter data management (MDM) system and head end system (HES) systems into partitioned data.
+* Amazon EventBridge to process and store late-arriving meter data in the correct partition.
+* AWS Glue Data Catalog for a central catalog of weather, topology, and meter data.
+* Amazon Athena to provide query results of partitioned data.
+* Two Step Function workflows:
+** Model training to build a machine learning (ML) model using partitioned business data.
+** Batch processing of partitioned business data from AWS Glue Data Catalog and ML model data for use in forecasting.
+* SageMaker to generate energy usage inferences using the ML model.
+* Amazon API Gateway to manage API queries.
 

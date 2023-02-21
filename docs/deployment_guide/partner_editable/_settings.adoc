@@ -1,9 +1,9 @@
 :partner-solution-project-name: quickstart-aws-utility-meter-data-analytics-platform
 :partner-solution-github-org: aws-quickstart
-:partner-product-name: Meter Data Analytics Platform
+:partner-product-name: Utility Meter Data Analytics
 :partner-product-short-name: MDA
 :partner-company-name: Amazon Web Services
-:doc-month: January
+:doc-month: February
 :doc-year: 2023
 :partner-contributors: Sascha Janssen, Tony Bulding, John Mousa, Flora Eggers, Michael Litz, Michael Hamilton, {partner-company-name}
 // :other-contributors: Akua Mansa, Trek10
