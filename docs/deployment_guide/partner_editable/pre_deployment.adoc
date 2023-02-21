@@ -3,24 +3,9 @@
 == Predeployment steps
 
 === Meter Data Generator and HES Simulator
-The Meter Data Generator and HES Simulator plus documentation can be found https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[here].
 
-During deployment, you can choose to deploy the meter data generator and HES simulator stacks by choosing `ENABLED` for the `Generation interval` parameter.
+The adapter regularly pulls data from the HES simulator and prepares the data for further processing. During deployment, you can choose to deploy the meter data generator and HES simulator stacks by choosing `ENABLED` for the `MeterDataGenerator` parameter. You also configure the number of meters and the interval between meter reads with the `TotalDevices` and `GenerationInterval` parameters, respectively. The default values for these parameters generate 50,000 reads every five minutes.
 
-The adapter has the responsibility to regularly pull the HES Simulator for new data, and then prepare the data for further processing. Furthermore, you can configure the number of devices (meters), as well as their reading interval. The configuration below will generate 50.000 meter reads every 15min (both values are also the default)
-
-.Enable/Disable Meter Data Generator during deployment (Default: DISABLED)
-```
-  {
-    "ParameterKey": "MeterDataGenerator",
-    "ParameterValue": "DISABLED|ENABLED"
-  },
-  {
-    "ParameterKey": "GenerationInterval",
-    "ParameterValue": "15"
-  },
-  {
-    "ParameterKey": "TotalDevices",
-    "ParameterValue": "50000"
-  }
-```
+//TODO convert doc for other repo to a GitHub Pages site with a BART link
+// The Meter Data Generator and HES Simulator plus documentation can be found https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[here].
+// question: The doc in the repo linked here explains how to install the data meter generator. Do they need this other doc if they select `ENABLED` for the MeterDataGenerator parameter for this deployment? Or is this other doc something they can refer to after deployment if they want to install the meter data generator later?
