@@ -1,17 +1,12 @@
-=== Set up Amazon Managed Grafana
-This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality.
+== Set up Amazon Managed Grafana
+This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality. Complete the instructions in this section to set up Amazon Managed Grafana.
 
-Amazon Managed Grafana supports SAML and AWS SSO for authentication. If your organization does not have SAML or AWS SSO set up, you should work with your AWS Admins to activate AWS SSO. Also as of this time there is no Cloudformation support for Amazon Managed Grafana, so these steps will walk you through:
+NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) and AWS Identity and Access Management (IAM) Identity Center for authentication. If your organization does not have SAML or AWS IAM Identity Center set up, consult your administrator.
 
-* Creating a Grafana workspace
-* Setting up AWS SSO for workspace access
-* Setting up permissions for Grafana to access Athena
-* Installing the dashboards and connecting to Athena
-
-=== Creating a Grafana workspace
+=== Create a Grafana workspace
 . In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console, choose *Create workspace*.
 
-. Enter a *Workspace Name*. If desired, enter an optional *Workspace Description*.
+. Enter a *Workspace Name* (for example, `mda_solution`). If desired, enter an optional *Workspace Description*.
 . Choose *Next*.
 . On the *Configure Settings* page, for *Authentication access*, select *Security Assertion Markup Language (SAML)*.
 . For *Permission type*, choose *Service managed*.
@@ -21,10 +16,10 @@ Amazon Managed Grafana supports SAML and AWS SSO for authentication. If your org
 . Choose *Next*.
 . Choose *Create workspace*.
 
-=== Set up SSO or SAML
-After the workspace finishes creating, you'll need to go in and select the SSO users and groups you wish to give access to Grafana. Once that is done, you should be able to log into your Grafana instance through the *Grafana workspace URL* provided in the console.
+=== Select SSO users
+After creating a workspace, select the single sign-on (SSO) users and groups you want to give access to Amazon Managed Grafana. The Grafana workspace URL is found on the *Outputs* tab of the `aws-utility-meter-data-analytics-platform` stack in the Cloud Formation console.
 
-=== Set up Athena Data Source in Grafana
+=== Set up Amazon Athena as a data source in Grafana
 Follow the AWS or Grafana docs for setting up Athena as a Data Source in Grafana:
 
 . https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html:[AWS Docs]

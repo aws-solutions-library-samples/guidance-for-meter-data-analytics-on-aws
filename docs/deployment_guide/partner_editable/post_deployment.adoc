@@ -5,7 +5,7 @@
 To see the capabilities of the QuickStart, follow the steps in this section to. These are additional information to dive deeper into the QuickStart, and adopt the original code basis.
 
 === Visualization
-The QuickStart provides a Grafana dashboard for visualisation, to setup the dashboard follow the following steps. *TODO* link to Grafana doc
+The solution provides a Grafana dashboard for visualization. , to setup the dashboard follow the following steps. *TODO* link to Grafana doc
 
 === Input Adapter
 The input adapter loads the meter reads from the external source (f.e. HES or FTP), and prepares them for the staging area. The input adapter can be exchanged to adopt different source systems and formats. This section will describe the input adapter that will be delivered with the QuickStart and explains which are the minimum changes to connect different systems and formats.
