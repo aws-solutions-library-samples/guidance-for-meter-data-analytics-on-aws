@@ -4,11 +4,40 @@
 
 To see the capabilities of the QuickStart, follow the steps in this section to. These are additional information to dive deeper into the QuickStart, and adopt the original code basis.
 
-=== Visualization
-The solution provides a Grafana dashboard for visualization. , to setup the dashboard follow the following steps. *TODO* link to Grafana doc
+=== Set up Amazon Managed Grafana dashboards
+This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality.
 
-=== Input Adapter
-The input adapter loads the meter reads from the external source (f.e. HES or FTP), and prepares them for the staging area. The input adapter can be exchanged to adopt different source systems and formats. This section will describe the input adapter that will be delivered with the QuickStart and explains which are the minimum changes to connect different systems and formats.
+NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) and AWS Identity and Access Management (IAM) Identity Center for authentication. If your organization does not have SAML or AWS IAM Identity Center set up, consult your administrator.
+
+==== Create a Grafana workspace
+. In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console, choose *Create workspace*.
+
+. Enter a *Workspace Name* (for example, `mda_solution`). If desired, enter an optional *Workspace Description*.
+. Choose *Next*.
+. On the *Configure Settings* page, for *Authentication access*, select *Security Assertion Markup Language (SAML)*.
+. For *Permission type*, choose *Service managed*.
+. Choose *Next*.
+. On the *Service managed permission settings* page, for *IAM permission access settings*, choose *Current account*.
+. For *Data sources and notification channels*, select *Amazon Athena*.
+. Choose *Next*.
+. Choose *Create workspace*.
+
+==== Select SSO users and groups
+After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana].
+
+To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
+
+==== Set up Amazon Athena as a data source in Grafana
+Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management].
+
+==== Import dashboards into Amazon Managed Grafana
+
+Upload or paste dashboard JSON files from the `grafana` folder of the https://fwd.aws/z8dwV?[solution's repository] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard].
+
+After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
+
+== Input Adapter
+The solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for the staging area. This section describes the default input adapter configuration and explains how to edit the adapter to connect to different systems and formats.
 
 *Connector to the HES simulator, which will be deployed with the QuickStart*
 
