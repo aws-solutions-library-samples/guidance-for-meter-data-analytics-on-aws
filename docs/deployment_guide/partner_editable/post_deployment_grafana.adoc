@@ -16,31 +16,16 @@ NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) 
 . Choose *Next*.
 . Choose *Create workspace*.
 
-=== Select SSO users
-After creating a workspace, select the single sign-on (SSO) users and groups you want to give access to the Grafana workspace. To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
+=== Select SSO users and groups
+After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana].
+
+To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
 
 === Set up Amazon Athena as a data source in Grafana
 Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management].
 
-=== Import the dashboards into Grafana
+=== Import dashboards into Amazon Managed Grafana
 
-. Sign in to the Grafana workspace URL using either SAML or SSO.
-. Select the *+* icon and go to import
+Upload or paste dashboard JSON files from the `grafana` folder of the https://fwd.aws/z8dwV?[solution's repository] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard].
 
-+
-:xrefstyle: short
-[#home-import]
-.Home Page Import
-[link=image/grafanas/grafana-home-import.png]
-image::../images/grafana/grafana-home-import.png[HomeImport]
-
-. Either copy in json from the /grafana/<dashboard-name>.json files in the repo or directly upload the json files
-
-+
-:xrefstyle: short
-[#copy-json]
-.Copy JSON
-[link=images/grafana/grafana-copy-json.png]
-image::../images/grafana/grafana-copy-json.png[CopyJson]
-
-After importing the tables, there may be some updates needed to match the configured data sources and glue database names chosen. If many errors pop up, go in and check the panels' data sources as well as the variables in the dashboard settings menus.
+After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
