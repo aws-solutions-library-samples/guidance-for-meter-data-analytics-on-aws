@@ -37,7 +37,7 @@ Upload or paste dashboard JSON files from the `grafana` folder of the https://fw
 After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
 
 == Input Adapter
-The solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for the staging area. This section describes the default input adapter configuration and explains how to edit the adapter to connect to different systems and formats.
+The solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for processing. This section describes the default input adapter configuration and explains how to edit the adapter to connect to different systems and formats.
 
 *Connector to the HES simulator, which will be deployed with the QuickStart*
 
