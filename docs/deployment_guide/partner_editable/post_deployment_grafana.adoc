@@ -1,3 +1,4 @@
+// NOTE: This section has been added to post_deployment.adoc
 == Set up Amazon Managed Grafana
 This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality. Complete the instructions in this section to set up Amazon Managed Grafana.
 
