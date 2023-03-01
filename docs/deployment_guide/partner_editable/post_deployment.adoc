@@ -38,31 +38,31 @@ Upload or paste the contents of dashboard JSON files from the `/scripts/assets/g
 After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
 
 === Input adapter
-The solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for processing. This section describes the default input adapter deployed by the solution and explains how to edit the adapter to connect to different systems and formats.
+As shown in <<inputadapter>> the solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for processing.
 
 [#inputadapter]
 .Input adapter
 [link=images/input_adapter.png]
 image::../docs/deployment_guide/images/input_adapter.png[Inputadapter]
 
-As shown in <<inputadapter>>, the input adapter connects to the solution's HES simulator. The different steps are explained below, depending on the source system in question these need to be adapted.
+A step functions workflow orchestrates the generation and download of the meter-reads file as a compressed file from the external database to the inbound bucket. Another process extracts the file from the file storage bucket and stores it in the uncompressed folder.
 
-(1) The state machine orchestrates the generation and download of the meter reads file from the HES. As soon as the meter read file has been generated it needs to be downloaded a compressed file to the inbound bucket, afterwards another process extracts the file and stores it in the uncompressed folder.
+The inbound bucket holds the compressed and uncompressed files. The solution deletes uncompressed files to save storage and costs.
 
-(2) The inbound bucket holds the compressed and uncompressed files, uncompressed files will be deleted and compressed files achieved to save storage and costs.
+After the file is extracted, the solution generates an event that invokes a Lambda function for further processing.
 
-(3) As soon as the file is extracted, an event will be sent which triggers an AWS Lambda function for further processing.
+The file-range-extractor Lambda function extracts range information (a range is a group of lines which should be processed together) from the uncompressed file based on the file size and number of chunks (configurable). A range is a group of lines that you want to process together. Each range information will be sent to SQS.
 
-(4) The File Range Extractor extracts range information (a range is a group of lines which should be processed together) from the uncompressed file based on the file size and number of chunks (configurable). Each range information will be sent to SQS.
+Each worker takes a range from the queue and processes the respective meter reads (parse and transform) before sending each element to Amazon Kinesis. This process ensures that the content input file can be processed in parallel. The worker transform the CSV line into JSON, and creates a separate object for each reading type.
 
-(5) Each worker takes a range from the queue and processes the respective meter reads (parse and transform) before sending each element to Amazon Kinesis. This process ensures that the content input file can be processed in parallel. The worker transform the CSV line into JSON, and creates a separate object for each reading type.
+The Amazon Kinesis data stream is used to ingest the data into the staging area. The stream scales on-demand.
 
-(6) The Amazon Kinesis data stream is used to ingest the data into the staging area. The stream scales on-demand.
 
+You can set up connections to other data sources by configuring additional dataflows. A dataflow connects to the external database, loads data from it, and stores data in a purpose-built database that can be accessed from the solution's central Data Catalog.
+
+The solution comes with two sample dataflows: weather and topology. To add a new dataflow, create a data pipeline that loads data from the source, prepares them, and stores results in an appropriate data store. Then add the data store you've configured to the solution's Data Catalog.
 === Dataflows
-Every external datasource is implemented as a dataflow, the dataflow connects to the external source loads the necessary data and stores them in a purpose built database from where they can be accessed through the central data catalog.
 
-The QuickStart comes with two example dataflows for weather and topology data. To add a new dataflow, a data pipeline that loads the data from the source, prepares them and stores the results in an appropriate data store needs to be designed. Once implemented the data store needs to be added to the central data catalog from where the subsequent processes can access the data.
 
 The architecture shows an example implementation, services can change depending on the requirements.
 
