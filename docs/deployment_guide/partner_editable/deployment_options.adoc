@@ -1,5 +1,5 @@
 This Quick Start provides one deployment option:
 
-* https://fwd.aws/5MAk5?[Deploy {partner-product-name} into an existing VPC]. This option provisions {partner-product-short-name} in your existing AWS infrastructure.
+* https://fwd.aws/5MAk5?[Deploy {partner-product-name} into an existing VPC^]. This option provisions {partner-product-short-name} in your existing AWS infrastructure.
 
 This Partner Solution provides a template for this option. It also lets you configure instance types and {partner-product-short-name} settings.
