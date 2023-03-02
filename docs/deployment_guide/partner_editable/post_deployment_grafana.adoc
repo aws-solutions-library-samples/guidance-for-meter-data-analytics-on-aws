@@ -1,102 +1,32 @@
-=== Setting up Amazon Managed Grafana for Meter Data Analytics
-This QuickStart includes a set of dashboards built in Amazon Managed Grafana. These dashboards leverage Amazon Athena to query data stored in the data lake, and depend on several of the optional datasets for full functionality.
+// NOTE: This section has been added to post_deployment.adoc
+== Set up Amazon Managed Grafana
+This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality. Complete the instructions in this section to set up Amazon Managed Grafana.
 
-As of January 2022, Amazon Managed Grafana only supports SAML and AWS SSO, for authentication. If your organization does not have SAML or AWS SSO set up, you should work with your AWS Admins to activate AWS SSO. Also as of this time there is no Cloudformation support for Amazon Managed Grafana, so these steps will walk you through:
+NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) and AWS Identity and Access Management (IAM) Identity Center for authentication. If your organization does not have SAML or AWS IAM Identity Center set up, consult your administrator.
 
-* Creating a Grafana workspace
-* Setting up AWS SSO for workspace access
-* Setting up permissions for Grafana to access Athena
-* Installing the dashboards and connecting to Athena
+=== Create a Grafana workspace
+. In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console, choose *Create workspace*.
 
-=== Creating a Workspace
-Grafana workspaces are set up through the user interface. Navigate to https://console.aws.amazon.com/grafana. 
+. Enter a *Workspace Name* (for example, `mda_solution`). If desired, enter an optional *Workspace Description*.
+. Choose *Next*.
+. On the *Configure Settings* page, for *Authentication access*, select *Security Assertion Markup Language (SAML)*.
+. For *Permission type*, choose *Service managed*.
+. Choose *Next*.
+. On the *Service managed permission settings* page, for *IAM permission access settings*, choose *Current account*.
+. For *Data sources and notification channels*, select *Amazon Athena*.
+. Choose *Next*.
+. Choose *Create workspace*.
 
+=== Select SSO users and groups
+After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana].
 
-[#grafana_console]
-.Grafana Console
-[link=images/grafana/grafana-home.png]
-image::../images/grafana/grafana-home.png[Grafana Home]
+To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
 
-. Select *Create Workspace*.
-+
-:xrefstyle: short
-[#create_workspace]
-.Create Workspace
-[link=/images/grafana/grafana-create-workspace.png]
-image::../images/grafana/grafana-create-workspace.png[Grafana Create Workspace]
+=== Set up Amazon Athena as a data source in Grafana
+Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management].
 
+=== Import dashboards into Amazon Managed Grafana
 
-. Specify *Workspace Name* and optionally *Workspace Description*.
-+
-:xrefstyle: short
-[#grafana_details]
-.Grafana Details
-[link=/images/grafana/grafana-details.png]
-image::../images/grafana/grafana-details.png[Grafana Workspace Details]
+Upload or paste dashboard JSON files from the `grafana` folder of the https://fwd.aws/z8dwV?[solution's repository] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard].
 
-. Select *Preferred Authentication Method (SSO or SAML)*.
-+
-:xrefstyle: short
-[#auth_settings]
-.Authentication Settings
-[link=/images/grafana/grafana-authentication-settings.png]
-image::../images/grafana/grafana-authentication-settings.png[Grafana Create Workspace]
-
-. Select *Service Managed IAM Policy*.
-+
-:xrefstyle: short
-[#select_iam_permissions]
-.IAM Permissions
-[link=/images/grafana/grafana-service-managed-policy.png]
-image::../images/grafana/grafana-service-managed-policy.png[Grafana Create Workspace]
-
-. Select *Current Account*.
-+
-:xrefstyle: short
-[#service_managed_perms]
-.Service Managed Permissions
-[link=/images/grafana/grafana-service-managed-permissions.png]
-image::../images/grafana/grafana-service-managed-permissions.png[Grafana Create Workspace]
-
-. Select *Athena*.
-+
-:xrefstyle: short
-[#data_sources]
-.Data Sources
-[link=/images/grafana/grafana-data-sources.png]
-image::../images/grafana/grafana-data-sources.png[Grafana Data Sources]
-
-Review your workspace details and then select *Create workspace*.
-
-=== Set up SSO or SAML
-After the workspace finishes creating, you'll need to go in and select the SSO users and groups you wish to give access to Grafana. Once that is done, you should be able to log into your Grafana instance through the *Grafana workspace URL* provided in the console. 
-
-=== Set up Athena Data Source in Grafana
-Follow the AWS or Grafana docs for setting up Athena as a Data Source in Grafana:
-
-. https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html:[AWS Docs]
-. https://grafana.com/docs/grafana/latest/datasources/add-a-data-source/[Grafana Docs]
-
-
-=== Import the dashboards into Grafana
-
-. Login into the Grafana console using either SAML or SSO.
-. Select the *+* icon and go to import
-
-+
-:xrefstyle: short
-[#home-import]
-.Home Page Import
-[link=image/grafanas/grafana-home-import.png]
-image::../images/grafana/grafana-home-import.png[HomeImport]
-
-. Either copy in json from the /grafana/<dashboard-name>.json files in the repo or directly upload the json files
-
-+
-:xrefstyle: short
-[#copy-json]
-.Copy JSON
-[link=images/grafana/grafana-copy-json.png]
-image::../images/grafana/grafana-copy-json.png[CopyJson]
-
-After importing the tables, there may be some updates needed to match the configured data sources and glue database names chosen. If many errors pop up, go in and check the panels' data sources as well as the variables in the dashboard settings menus.
+After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].

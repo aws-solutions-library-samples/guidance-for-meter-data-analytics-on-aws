@@ -1,61 +1,81 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
+:xrefstyle: short
 
 == Postdeployment steps
 
-To see the capabilities of the QuickStart, follow the steps in this section to. These are additional information to dive deeper into the QuickStart, and adopt the original code basis.
+=== Set up Amazon Managed Grafana dashboards
+This solution includes a set of Amazon Managed Grafana dashboards. These dashboards use Amazon Athena to query data stored in a data lake and depend on several of the optional datasets for full functionality.
 
-=== Visualization
-The QuickStart provides a Grafana dashboard for visualisation, to setup the dashboard follow the following steps. *TODO* link to Grafana doc
+NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) and AWS Identity and Access Management (IAM) Identity Center for authentication. If your organization does not have SAML or AWS IAM Identity Center set up, consult your administrator.
 
-=== Input Adapter
-The input adapter loads the meter reads from the external source (f.e. HES or FTP), and prepares them for the staging area. The input adapter can be exchanged to adopt different source systems and formats. This section will describe the input adapter that will be delivered with the QuickStart and explains which are the minimum changes to connect different systems and formats.
+==== Create a Grafana workspace
+. In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console, choose *Create workspace*.
 
-*Connector to the HES simulator, which will be deployed with the QuickStart*
+. Enter a *Workspace Name* (for example, `mda_solution`). If desired, enter an optional *Workspace Description*.
+. Choose *Next*.
+. On the *Configure Settings* page, for *Authentication access*, select *Security Assertion Markup Language (SAML)*.
+. For *Permission type*, choose *Service managed*.
+. Choose *Next*.
+. On the *Service managed permission settings* page, for *IAM permission access settings*, choose *Current account*.
+. For *Data sources and notification channels*, select *Amazon Athena*.
+. Choose *Next*.
+. Choose *Create workspace*.
 
-.input adapter
-image::../docs/deployment_guide/images/input_adapter.png[Architecture,width=80%,height=80%]
+==== Select SSO users and groups
+After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana].
 
-The input adapter implementation connects to the provided HES simulator. The different steps are explained below, depending on the source system in question these need to be adapted.
+To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
 
-(1) The state machine orchestrates the generation and download of the meter reads file from the HES. As soon as the meter read file has been generated it needs to be downloaded a compressed file to the inbound bucket, afterwards another process extracts the file and stores it in the uncompressed folder.
+==== Set up Amazon Athena as a data source in Grafana
+Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management].
 
-(2) The inbound bucket holds the compressed and uncompressed files, uncompressed files will be deleted and compressed files achieved to save storage and costs.
+==== Import dashboards into Amazon Managed Grafana
 
-(3) As soon as the file is extracted, an event will be sent which triggers an AWS Lambda function for further processing.
+Upload or paste the contents of dashboard JSON files from the `/scripts/assets/grafana` folder of the https://fwd.aws/z8dwV?[solution's repository] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard].
 
-(4) The File Range Extractor extracts range information (a range is a group of lines which should be processed together) from the uncompressed file based on the file size and number of chunks (configurable). Each range information will be sent to SQS.
+After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
 
-(5) Each worker takes a range from the queue and processes the respective meter reads (parse and transform) before sending each element to Amazon Kinesis. This process ensures that the content input file can be processed in parallel. The worker transform the CSV line into JSON, and creates a separate object for each reading type.
+=== Input adapter
+As shown in <<inputadapter>> the solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for processing.
 
-(6) The Amazon Kinesis data stream is used to ingest the data into the staging area. The stream scales on-demand.
+[#inputadapter]
+.Input adapter
+[link=images/input_adapter.png]
+image::../docs/deployment_guide/images/input_adapter.png[Inputadapter]
+
+A step functions workflow orchestrates the generation and download of the meter-reads file as a compressed file from the external database to the inbound bucket. Another process extracts the file from the inbound bucket and stores it in the uncompressed folder. The inbound bucket stores the compressed and uncompressed files. The solution deletes uncompressed files to save storage and costs.
+
+After the file is extracted, the solution generates an event that invokes a Lambda function for further processing. The file-range-extractor Lambda function extracts range information from the uncompressed file based on the file size and number of chunks (configurable). A range is a group of lines that you want to process together. Extracted range information is sent to Amazon Simple Queue Service (Amazon SQS).
+
+Each worker takes a range from the Amazon SQS queue and processes the respective meter reads (parse and transform) before sending each element to Amazon Kinesis. This process ensures that the content input file can be processed in parallel. The worker transforms the CSV line into JSON and creates a separate object for each reading type. The Amazon Kinesis data stream ingests the data into the staging area. The stream scales on demand.
 
 === Dataflows
-Every external datasource is implemented as a dataflow, the dataflow connects to the external source loads the necessary data and stores them in a purpose built database from where they can be accessed through the central data catalog.
+You can set up connections to other data sources by configuring additional dataflows. A dataflow connects to the external database, loads data from it, and stores data in a purpose-built database that can be accessed from the solution's central Data Catalog.
 
-The QuickStart comes with two example dataflows for weather and topology data. To add a new dataflow, a data pipeline that loads the data from the source, prepares them and stores the results in an appropriate data store needs to be designed. Once implemented the data store needs to be added to the central data catalog from where the subsequent processes can access the data.
+[#dataflow]
+.Dataflow
+[link=images/custom_dataflow.png]
+image::../docs/deployment_guide/images/custom_dataflow.png[Dataflow,width=80%,height=80%]
 
-The architecture shows an example implementation, services can change depending on the requirements.
-
-.custom dataflow
-image::../docs/deployment_guide/images/custom_dataflow.png[Architecture,width=80%,height=80%]
+The solution comes with two sample dataflows: weather and topology. To add a new dataflow, create a data pipeline that loads data from the source, prepares them, and stores results in an appropriate data store. Then add the data store you've configured to the solution's Data Catalog.
 
 === Data partitioning
-The curated data in the *integration stage* S3 bucket is partitioned by *reading type, year, month, day, hour*, as follows:
+The curated data in the integration stage S3 bucket is partitioned by reading type, year, month, day, and hour, as follows:
 
 `s3://IntegrationBucket/reading_type=<reading_type_value>/year=<year>/month=<month>/day=<day>/hour=<hour>/<meter-data-file-in-parquet-format>`
 
 You can find all meter reads for the hour of a day on the lowest level of the partition tree. To optimize query performance, the data is stored in a column-based file format (Parquet).
 
 === Late-arriving data
-The data lake handles late-arriving meter reads, will be detected as soon as the data reaches the *staging stage*. If a late read is detected an event will be send to Amazon EventBridge. The ETL pipeline takes care of moving the late read to the correct partition, and makes sure that data is still stored in an optimized way.
+The data lake handles late-arriving meter reads. Late-arriving meter reads are detected as soon as the data reaches the staging stage. If a late read is detected, an event is sent to Amazon EventBridge. The ETL pipeline takes care of moving the late read to the correct partition and ensures that data is stored in an optimized way.
 
 === Data Formats
-*Inbound format*
 
-The input meter-data format is variable and can be adjusted as described in the section <<Customize this QuickStart,'Customize this Quick Start'>>. The sample input data format of the https://github.com/aws-quickstart/quickstart-aws-utility-meter-data-generator[Meter Data Generator] looks like the following:
+==== Inbound format
 
+The inbound meter-data format is variable and can be adjusted. The following shows the sample inbound data format of the Meter Data Generator:
 
-[cols="1,1,1", options="header"]
+[cols="1,1,1,1", options="header"]
 .Inbound schema
 |===
 |Field
@@ -63,21 +83,21 @@ The input meter-data format is variable and can be adjusted as described in the 
 |Format
 |Description
 
-|time|timestamp|yyyy-MM-dd HH:mm:ss.SSSSSSS|The timestamp the read reaches the source system
-|reading_time|timestamp|yyyy-MM-dd HH:mm:ss.SSSSSSS|The timestamp of the actual read
-|device_id|string|7a044be7-2f1e-3bf1-aa86-b8b1b9064f19|uuid
-|measure_name|string|
-|load|double|0.000|Load, unit: A
-|crrnt|double|0.000|Current, unit: A
-|pf|double|0.000|Power Factor, between 0 and 1
-|kva|double|0.000|Volt Ampere, unit: VA
-|kw|double|0.000|Kilowatt, unit: kW
-|vltg|double|0.000|Voltage, unit V
+|`time`|timestamp|`yyyy-MM-dd HH:mm:ss.SSSSSSS`|Timestamp when the meter read reaches the source system.
+|`reading_time`|timestamp|`yyyy-MM-dd HH:mm:ss.SSSSSSS`|Timestamp of the actual meter read.
+|`device_id`|string|`7a044be7-2f1e-3bf1-aa86-b8b1b9064f19`|uuid
+|`measure_name`|string|  |
+|`load`|double|`0.000`|Load, unit: A
+|`crrnt`|double|`0.000`|Current, unit: A
+|`pf`|double|`0.000`|Power factor, between 0 and 1
+|`kva`|double|`0.000`|Volt ampere, unit: VA
+|`kw`|double|`0.000`|Kilowatt, unit: kW
+|`vltg`|double|`0.000`|Voltage, unit: V
 |===
 
-*Integrated format*
+==== Integrated format
 
-Data is stored in the following format in the *integration stage*.
+Data are stored in the following format in the integration stage:
 
 [cols="1,1,1", options="header"]
 .Integration schema
@@ -86,17 +106,17 @@ Data is stored in the following format in the *integration stage*.
 |Type
 |Format
 
-|meter_id           |String     |
-|reading_value      |Double     |0.000
-|reading_date_time  |Timestamp  |yyyy-MM-dd HH:mm:ss.SSS
-|reading_type       |String     |load, crrnt, pf, kva, kw, vltg
-|unit               |String     |
-|obis_code          |String     |
-|phase              |String     |
-|reading_source     |String     |
-|reading_type       |String (Partitioned)   |
-|year               |String (Partitioned)   |
-|month              |String (Partitioned)   |
-|day                |String (Partitioned)   |
-|hour               |String (Partitioned)   |
+|`meter_id`           |String     |
+|`reading_value`      |Double     |`0.000`
+|`reading_date_time`  |Timestamp  |`yyyy-MM-dd HH:mm:ss.SSS`
+|`reading_type`       |String     |`load, crrnt, pf, kva, kw, vltg`
+|`unit`               |String     |
+|`obis_code`          |String     |
+|`phase`              |String     |
+|`reading_source`     |String     |
+|`reading_type`       |String (Partitioned)   |
+|`year`               |String (Partitioned)   |
+|`month`              |String (Partitioned)   |
+|`day`                |String (Partitioned)   |
+|`hour`               |String (Partitioned)   |
 |===
