@@ -9,7 +9,7 @@ This solution includes a set of Amazon Managed Grafana dashboards. These dashboa
 NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) and AWS Identity and Access Management (IAM) Identity Center for authentication. If your organization does not have SAML or AWS IAM Identity Center set up, consult your administrator.
 
 ==== Create a Grafana workspace
-. In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console, choose *Create workspace*.
+. In the https://console.aws.amazon.com/grafana[Amazon Managed Grafana^] console, choose *Create workspace*.
 
 . Enter a *Workspace Name* (for example, `mda_solution`). If desired, enter an optional *Workspace Description*.
 . Choose *Next*.
@@ -22,18 +22,18 @@ NOTE: Amazon Managed Grafana supports Security Assertion Markup Language (SAML) 
 . Choose *Create workspace*.
 
 ==== Select SSO users and groups
-After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana].
+After creating a Grafana workspace, select the single sign-on (SSO) users and groups you want to give access to it. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html[Managing user and group access to Amazon Managed Grafana^].
 
-To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana] console.
+To access the workspace, users sign in to the *Grafana workspace URL* found on *Workspaces* page in the https://console.aws.amazon.com/grafana[Amazon Managed Grafana^] console.
 
 ==== Set up Amazon Athena as a data source in Grafana
-Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management].
+Add Amazon Athena as a data source in Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/AWS-Athena.html[Amazon Athena^] and https://grafana.com/docs/grafana/latest/administration/data-source-management/[Data Source Management^].
 
 ==== Import dashboards into Amazon Managed Grafana
 
-Upload or paste the contents of dashboard JSON files from the `/scripts/assets/grafana` folder of the https://fwd.aws/z8dwV?[solution's repository] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard].
+Upload or paste the contents of dashboard JSON files from the `/scripts/assets/grafana` folder of the https://fwd.aws/z8dwV?[solution's repository^] to Amazon Managed Grafana. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-export-and-import.html#importing-a-dashboard[Importing a dashboard^].
 
-After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards].
+After importing, you may need to verify that the names of dashboard panel data sources match AWS Glue database names. If you receive errors, check panel data sources and variables in dashboard settings. For more information, refer to https://docs.aws.amazon.com/grafana/latest/userguide/add-a-panel-to-a-dashboard.html[Adding or editing a panel^] and https://docs.aws.amazon.com/grafana/latest/userguide/dashboard-overview.html[Dashboards^].
 
 === Input adapter
 As shown in <<inputadapter>> the solution's input adapter loads meter reads from an external source (such as HES or FTP) and prepares them for processing.
