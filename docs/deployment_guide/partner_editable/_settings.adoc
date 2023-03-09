@@ -5,7 +5,7 @@
 :partner-company-name: Amazon Web Services
 :doc-month: February
 :doc-year: 2023
-:partner-contributors: Sascha Janssen, Tony Bulding, John Mousa, Flora Eggers, Michael Litz, Michael Hamilton, {partner-company-name}
+:partner-contributors: Sascha Janssen, Tony Bulding, John Mousa, Flora Eggers, Michael Litz, and Michael Hamilton, {partner-company-name}
 // :other-contributors: Akua Mansa, Trek10
 :aws-contributors:
 :aws-ia-contributors:
