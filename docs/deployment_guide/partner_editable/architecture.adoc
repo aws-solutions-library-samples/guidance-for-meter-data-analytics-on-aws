@@ -25,9 +25,9 @@ As shown in <<architecture1>>, the solution sets up the following:
 * Amazon EventBridge to process and store late-arriving meter data in the correct partition.
 * AWS Glue Data Catalog for a central catalog of weather, topology, and meter data.
 * Amazon Athena to provide query results of partitioned data.
-* Two Step Function workflows:
+* Two AWS Step Functions workflows:
 ** Model training to build a machine learning (ML) model using partitioned business data.
-** Batch processing of partitioned business data from AWS Glue Data Catalog and ML model data for use in forecasting.
-* SageMaker to generate energy usage inferences using the ML model.
+** Batch processing of partitioned business data from the Data Catalog and ML model data for use in forecasting.
+* Amazon SageMaker to generate energy usage inferences using the ML model.
 * Amazon API Gateway to manage API queries.
 
