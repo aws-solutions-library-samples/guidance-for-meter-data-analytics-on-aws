@@ -19,6 +19,7 @@ Metadata:
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       StagingRecordsStream:
         default: Kinesis Stream reference
@@ -34,6 +35,8 @@ Metadata:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
 
 Parameters:
   StagingRecordsStream:
@@ -68,7 +71,7 @@ Parameters:
     ConstraintDescription: >-
       Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
-    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
     Type: String
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
@@ -99,6 +102,8 @@ Parameters:
 Outputs:
   InboundDataBucket:
     Value: !Ref InboundDataBucket
+  InboundFileRangeQueueName:
+    Value: !GetAtt InboundFileRangeQueue.QueueName
 
 Mappings:
   AdapterFunctions:
