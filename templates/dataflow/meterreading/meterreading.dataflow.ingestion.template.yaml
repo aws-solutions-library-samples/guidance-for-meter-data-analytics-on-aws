@@ -110,6 +110,10 @@ Resources:
         ProcessingConfiguration:
           Enabled: true
           Processors:
+            - Type: RecordDeAggregation
+              Parameters:
+                - ParameterName: SubRecordType
+                  ParameterValue: JSON
             - Type: MetadataExtraction
               Parameters:
                 - ParameterName: MetadataExtractionQuery

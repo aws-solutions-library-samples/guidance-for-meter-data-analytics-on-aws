@@ -771,7 +771,7 @@ Resources:
                   'base_url': event['ResourceProperties']['ReadingsFileBaseURL'],
                   'bucket':  event['ResourceProperties']['S3Bucket'],
                   'landing_prefix': 'data/landing/' + event['ResourceProperties']['IntegrationId'] + '/',
-                  'uncompressed_prefix': 'data/uncompressed/' + event['ResourceProperties']['IntegrationId'] + '/',
+                  'uncompressed_prefix': 'data/uncompressed/csv/' + event['ResourceProperties']['IntegrationId'] + '/',
                   'processed_prefix': 'data/processed/' + event['ResourceProperties']['IntegrationId'] + '/',
                   'end_delta': {'interval': 15, 'period': 'minutes'},
                   'integrations_table': event['ResourceProperties']['IntergrationsTable'],
