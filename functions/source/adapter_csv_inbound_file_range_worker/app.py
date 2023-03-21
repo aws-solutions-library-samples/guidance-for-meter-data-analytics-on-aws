@@ -193,7 +193,7 @@ def to_staging_stream_format(file_records):
     for file_record in file_records:
         try:
             json_record = json.loads(file_record)
-            unwanted_fields = ["time", "device_id", "measure_name"]
+            unwanted_fields = ["time", "device_id", "measure_name", "arrival_time"]
             measures = {k: v for k, v in json_record.items() if k not in unwanted_fields}
             for measure_name, measure_value in measures.items():
                 result.append({

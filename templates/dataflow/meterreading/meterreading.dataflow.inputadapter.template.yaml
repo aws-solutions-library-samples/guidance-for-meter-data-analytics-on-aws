@@ -99,6 +99,8 @@ Parameters:
 Outputs:
   InboundDataBucket:
     Value: !Ref InboundDataBucket
+  InboundFileRangeQueueName:
+    Value: !GetAtt InboundFileRangeQueue.QueueName
 
 Mappings:
   AdapterFunctions:
