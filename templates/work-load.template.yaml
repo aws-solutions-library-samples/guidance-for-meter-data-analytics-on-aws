@@ -243,7 +243,7 @@ Metadata:
           - GenerationInterval
           - TotalDevices
       - Label:
-          default: AWS Solution configuration
+          default: AWS solution configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -258,8 +258,8 @@ Metadata:
       TotalDevices:
         default: Number of devices
       QSS3BucketName:
-        default: AWS Solution S3 bucket name
+        default: AWS solution S3 bucket name
       QSS3KeyPrefix:
-        default: AWS Solution S3 key prefix
+        default: AWS solution S3 key prefix
       QSS3BucketRegion:
-        default: AWS Solution S3 bucket Region
+        default: AWS solution S3 bucket Region
