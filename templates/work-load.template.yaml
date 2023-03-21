@@ -23,7 +23,7 @@ Resources:
     Condition: DeployMeterGeneratorAndHesSimulator
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/templates/workload.template.yaml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-headend-system-simulator/templates/headend.system.simulator.main.yaml'
         - S3Region:
             !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
@@ -31,8 +31,12 @@ Resources:
         GenerationState: 'ENABLED'
         GenerationInterval: !Ref GenerationInterval
         TotalDevices: !Ref TotalDevices
+        RegionalVoltage: 220
+        LateArrivalSimulate: 'DISABLED'
+        LateArrivalPercent: 10
+        LateArrivalMinuteOffset: 1440
         QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-data-generator/'
+        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-headend-system-simulator/'
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
   IntegrationStack:
@@ -71,6 +75,7 @@ Resources:
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
         IntegrationBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
+        DemoMode: !Ref DemoMode
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -134,18 +139,18 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
-#  VoltVarFeatureStack:
-#    Type: 'AWS::CloudFormation::Stack'
-#    Properties:
-#      TemplateURL: !Sub
-#        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/voltvar/voltvar.feature.template.yaml'
-#        - S3Region:
-#            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-#          S3Bucket:
-#            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-#      Parameters:
-#        QSS3BucketName: !Ref QSS3BucketName
-#        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  VoltVarFeatureStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/voltvar/voltvar.feature.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
 Outputs:
   StackName:
@@ -159,13 +164,24 @@ Outputs:
     Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
+  DemoMode:
+    Default: 'true'
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description:
+      If DemoMode is enabled, additional utility functions will be deployed to customize the MDA for demo purposes. 
+      The overall functionality will not be changed, but the OOTB demo experience will be improved.
   MeterDataGenerator:
     Default: 'DISABLED'
     AllowedValues:
       - 'ENABLED'
       - 'DISABLED'
     Description:
-      Choose "ENABLED" to deploy the meter data generator and HES simulator stacks. If deployed, both start to generate meter reads immediately, which can result in additional costs.
+      Enable or disable the meter simulator. If disabled the simulation stack will NOT be deployed.
+      If enabled the meter generator as well as HES simulator will be deployed, and both start to generate meter reads immediately.
+      (additional costs can occur).
     Type: String
   GenerationInterval:
     Description: Interval between meter reads in minutes, minimum of five.
@@ -222,6 +238,7 @@ Metadata:
       - Label:
           default: Meter data generator configuration
         Parameters:
+          - DemoMode
           - MeterDataGenerator
           - GenerationInterval
           - TotalDevices
@@ -232,8 +249,10 @@ Metadata:
           - QSS3KeyPrefix
           - QSS3BucketRegion
     ParameterLabels:
+      DemoMode:
+        default: Enable/disable demo mode
       MeterDataGenerator:
-        default: Meter data and HES simulator
+        default: Enable/disable the generator
       GenerationInterval:
         default: Generation interval
       TotalDevices:
