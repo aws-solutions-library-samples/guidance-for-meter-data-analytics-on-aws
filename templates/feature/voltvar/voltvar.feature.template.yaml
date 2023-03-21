@@ -60,19 +60,11 @@ Globals:
 
 
 Resources:
-  VoltVarTimestreamDatabase:
-    Type: AWS::Timestream::Database
+  VoltVarTable:
+    Type: AWS::Serverless::SimpleTable
     Properties:
-      DatabaseName: "VVODatabase"
+      TableName: VoltVarTable
 
-  VoltVarTimestreamTable:
-    Type: AWS::Timestream::Table
-    Properties:
-      TableName: "VVOTable"
-      DatabaseName: !Ref VoltVarTimestreamDatabase
-      RetentionProperties:
-        MemoryStoreRetentionPeriodInHours: "24"
-        MagneticStoreRetentionPeriodInDays: "365"
 
   VoltVarInputSelector:
     Type: AWS::Serverless::Function
@@ -140,8 +132,7 @@ Resources:
       MemorySize: 128
       Environment:
         Variables:
-          timestream_db_name: !Ref VoltVarTimestreamDatabase
-          timestream_table_name: !Ref VoltVarTimestreamTable
+          DYNAMO_TABLE: !Ref VoltVarTable
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt VoltVarCalculationQueue.QueueName
