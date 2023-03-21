@@ -59,7 +59,7 @@ Parameters:
   OrchestratorInterval:
     Description: 'Minutes per interval, must be greater than 5.'
     Type: Number
-    Default: 5
+    Default: 15
     MinValue: 5
     ConstraintDescription: 'OrchestratorInterval must contain a numeric value greater than 5.'
   SFTPServerAddress:
@@ -773,13 +773,13 @@ Resources:
                   'landing_prefix': 'data/landing/' + event['ResourceProperties']['IntegrationId'] + '/',
                   'uncompressed_prefix': 'data/uncompressed/csv/' + event['ResourceProperties']['IntegrationId'] + '/',
                   'processed_prefix': 'data/processed/' + event['ResourceProperties']['IntegrationId'] + '/',
-                  'end_delta': {'interval': 15, 'period': 'minutes'},
+                  'end_delta': {'interval': 30, 'period': 'minutes'},
                   'integrations_table': event['ResourceProperties']['IntergrationsTable'],
                   'sftp_server_address': event['ResourceProperties']['SFTPServerAddress'],
                   'sftp_user_name': event['ResourceProperties']['SFTPUserName'],
                   'secret_arn': event['ResourceProperties']['SFTPSecretARN'],
                   'state_machine_arn': event['ResourceProperties']['StateMachineARN'],
-                  'start_date': str(datetime.strftime((datetime.now(timezone.utc) - timedelta(**{'minutes': int(15)})),'%Y-%m-%d %H:%M:%S.%f'))
+                  'start_date': str(datetime.strftime((datetime.now(timezone.utc) - timedelta(**{'minutes': int(15)})),'%Y-%m-%d %H:%M:%S.%f')[:-3])
                 }
               }
               if event['RequestType'] == 'Create':
