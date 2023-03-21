@@ -42,6 +42,12 @@ Parameters:
     Type: String
     Description: 'Glue script bucket.'
 
+Outputs:
+  StagingGlueWorkflow:
+    Value: !Ref MeterReadingIntegrationGlueWorkflow
+  GlueTableStagingName:
+    Value: !Ref GlueTableStaging
+
 Resources:
   #
   # Glue Jobs
@@ -70,11 +76,11 @@ Resources:
         --TARGET_TABLE_NAME: "meter_readings_integrated_parquet"
         --INTEGRATED_BUCKET_NAME: !Ref IntegratedDataBucket
       MaxRetries: 0
-      NumberOfWorkers: 20
+      NumberOfWorkers: 80
       WorkerType: G.1X
       ExecutionProperty:
         MaxConcurrentRuns: 1
-      GlueVersion: "3.0"
+      GlueVersion: "4.0"
 
   #
   # Glue Crawlers
@@ -83,74 +89,58 @@ Resources:
     Type: AWS::Glue::Crawler
     Properties:
       Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueStagingDatabase
-      TablePrefix: meter_readings_staging_
       Targets:
-        S3Targets:
-          - Path: !Sub "s3://${StagingDataBucket}/readings/json"
+        CatalogTargets:
+          - DatabaseName: !Ref GlueStagingDatabase
+            Tables:
+              - meter_readings_staging_json
       SchemaChangePolicy:
         UpdateBehavior: "LOG"
-        DeleteBehavior: "DEPRECATE_IN_DATABASE"
-
-  IntegratedDataBucketCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Role: !GetAtt GlueCrawlerRole.Arn
-      DatabaseName: !Ref GlueIntegratedDatabase
-      TablePrefix: meter_readings_integrated_
-      Targets:
-        S3Targets:
-          - Path: !Sub "s3://${IntegratedDataBucket}/readings/parquet"
-      SchemaChangePolicy:
-        UpdateBehavior: "LOG"
-        DeleteBehavior: "DEPRECATE_IN_DATABASE"
+        DeleteBehavior: "LOG"
 
   #
   # Glue Workflow
   #
 
-  GlueWorkflowEventRule:
-    Type: AWS::Events::Rule
+  GlueWorkflowScheduleRule:
+    Type: AWS::Scheduler::Schedule
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E3001
     Properties:
-      Description: "Integration Glue Workflow Trigger"
-      EventPattern:
-        source:
-          - "aws.s3"
-        detail-type:
-          - "Object Created"
-        detail:
-          bucket:
-            name:
-              - !Ref StagingDataBucket
-          object:
-            key:
-              - prefix: "readings/json/"
-      State: "ENABLED"
-      Targets:
-        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${MeterReadingGlueWorkflow}"
-          Id: "integration_glue_workflow_trigger"
-          RoleArn: !GetAtt EventBridgeRole.Arn
+      Description: "Schedule workflow run"
+      Name: "Glue_Int_Workflow_Trigger"
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      ScheduleExpression: "cron(*/30 * * * ? *)"
+      State: "DISABLED" #TODO Enable if not DEMO mode
+      Target:
+        Arn: "arn:aws:scheduler:::aws-sdk:glue:startWorkflowRun"
+        Input: !Sub '{"Name": "${MeterReadingIntegrationGlueWorkflow}"}'
+        RoleArn: !GetAtt EventBridgeSchedulerRole.Arn
 
-  MeterReadingGlueWorkflow:
+  MeterReadingIntegrationGlueWorkflow:
     Type: AWS::Glue::Workflow
     Properties:
-      Description: Meterreading Glue workflow to move data from staging to integrated zone.
+      Description: Meter reading Glue workflow to move data from staging to integrated zone.
 
-  GlueWorkflowTrigger:
+  GlueEventWorkflowTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Actions:
         - CrawlerName: !Ref StagingDataBucketCrawler
       Type: EVENT
-      Description: "A on demand trigger for the glue workflow."
-      WorkflowName: !Ref MeterReadingGlueWorkflow
+      Description: "Event based trigger for the glue workflow."
+      WorkflowName: !Ref MeterReadingIntegrationGlueWorkflow
 
   IntegrationJobTrigger:
     Type: AWS::Glue::Trigger
     Properties:
       Type: "CONDITIONAL"
       StartOnCreation: true
-      WorkflowName: !Ref MeterReadingGlueWorkflow
+      WorkflowName: !Ref MeterReadingIntegrationGlueWorkflow
       Actions:
         - JobName: !Ref IntegrateMeterReadingsGlueJob
       Predicate:
@@ -159,24 +149,117 @@ Resources:
             CrawlerName: !Ref StagingDataBucketCrawler
             CrawlState: "SUCCEEDED"
 
-  IntegratedDataBucketCrawlerGlueTrigger:
-    Type: AWS::Glue::Trigger
+  #
+  # Table
+  #
+  GlueTableIntegration:
+    Type: "AWS::Glue::Table"
     Properties:
-      Actions:
-        - CrawlerName: !Ref IntegratedDataBucketCrawler
-      Type: "CONDITIONAL"
-      StartOnCreation: true
-      WorkflowName: !Ref MeterReadingGlueWorkflow
-      Predicate:
-        Conditions:
-          - LogicalOperator: "EQUALS"
-            JobName: !Ref IntegrateMeterReadingsGlueJob
-            State: "SUCCEEDED"
+      DatabaseName: !Ref GlueIntegratedDatabase
+      CatalogId: !Ref "AWS::AccountId"
+      TableInput:
+        Name: "meter_readings_integrated_parquet"
+        TableType: "EXTERNAL_TABLE"
+        Parameters:
+          CrawlerSchemaDeserializerVersion: "1.0"
+          CrawlerSchemaSerializerVersion: "1.0"
+          classification: "parquet"
+          compressionType: "snappy"
+          typeOfData: "file"
+        StorageDescriptor:
+          Columns:
+            - Name: "meter_id"
+              Type: "string"
+            - Name: "reading_value"
+              Type: "double"
+            - Name: "reading_type"
+              Type: "string"
+            - Name: "reading_date_time"
+              Type: "timestamp"
+            - Name: "reading_source"
+              Type: "string"
+            - Name: "year"
+              Type: "string"
+            - Name: "month"
+              Type: "string"
+            - Name: "day"
+              Type: "string"
+            - Name: "hour"
+              Type: "string"
+          Location: !Sub "s3://${IntegratedDataBucket}/readings/parquet"
+          InputFormat: "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
+          OutputFormat: "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+          Compressed: true
+          NumberOfBuckets: -1
+          SerdeInfo:
+            SerializationLibrary: "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+            Parameters:
+              "serialization.format": "1"
+          StoredAsSubDirectories: false
+        PartitionKeys:
+          - Name: "reading_type"
+            Type: "string"
+          - Name: "year"
+            Type: "string"
+          - Name: "month"
+            Type: "string"
+          - Name: "day"
+            Type: "string"
+          - Name: "hour"
+            Type: "string"
+        Retention: 0
+
+  GlueTableStaging:
+    Type: "AWS::Glue::Table"
+    Properties:
+      DatabaseName: !Ref GlueStagingDatabase
+      CatalogId: !Ref "AWS::AccountId"
+      TableInput:
+        Name: "meter_readings_staging_json"
+        TableType: "EXTERNAL_TABLE"
+        Parameters:
+          CrawlerSchemaDeserializerVersion: "1.0"
+          CrawlerSchemaSerializerVersion: "1.0"
+          classification: "json"
+          typeOfData: "file"
+          compressionType: "none"
+        StorageDescriptor:
+          Columns:
+            - Name: "meter_id"
+              Type: "string"
+            - Name: "reading_type"
+              Type: "string"
+            - Name: "reading_value"
+              Type: "string"
+            - Name: "reading_date_time"
+              Type: "string"
+            - Name: "reading_source"
+              Type: "string"
+          Location: !Sub "s3://${StagingDataBucket}/readings/json"
+          InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+          OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+          Compressed: false
+          NumberOfBuckets: -1
+          SerdeInfo:
+            SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
+            Parameters:
+              paths: "meter_id,reading_date_time,reading_source,reading_type,reading_value,year,month,day,hour"
+          StoredAsSubDirectories: false
+        PartitionKeys:
+          - Name: "year"
+            Type: "string"
+          - Name: "month"
+            Type: "string"
+          - Name: "day"
+            Type: "string"
+          - Name: "hour"
+            Type: "string"
+        Retention: 0
 
   #
   # Iam Roles
   #
-  EventBridgeRole:
+  EventBridgeSchedulerRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -184,7 +267,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: !Sub events.amazonaws.com
+              Service: "scheduler.amazonaws.com"
             Action: 'sts:AssumeRole'
       Path: /
       Policies:
@@ -194,8 +277,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - "glue:notifyEvent"
-                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${MeterReadingGlueWorkflow}"
+                  - "glue:StartWorkflowRun"
+                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${MeterReadingIntegrationGlueWorkflow}"
+
 
   GlueCrawlerRole:
     Type: AWS::IAM::Role
@@ -226,6 +310,8 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Path: "/"
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchFullAccess'
 
   S3MeterReadingBucketAccessPolicy:
     Type: AWS::IAM::Policy
@@ -234,13 +320,6 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Effect: Allow
-            Action:
-              - "logs:CreateLogGroup"
-              - "logs:CreateLogStream"
-              - "logs:PutLogEvents"
-            Resource:
-              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
           - Effect: Allow
             Action:
               - 's3:GetObject'
@@ -257,6 +336,8 @@ Resources:
           - Effect: Allow
             Action:
               - 'glue:GetTable'
+              - 'glue:UpdateTable'
+              - 'glue:UpdateColumnStatisticsForTable'
               - 'glue:GetTables'
               - 'glue:GetPartition'
               - 'glue:GetPartitions'

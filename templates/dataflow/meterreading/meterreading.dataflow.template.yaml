@@ -4,7 +4,7 @@ Description: "Deploys meter reading pipelines. (qs-1r18anahd)"
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
-
+  DemoMode: !Equals [ !Ref DemoMode, 'true' ]
 
 Outputs:
   InboundDataBucket:
@@ -22,6 +22,7 @@ Metadata:
           - GlueIntegratedDatabase
           - MdaGlueScriptBucket
           - IntegrationBus
+          - DemoMode
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -41,6 +42,8 @@ Metadata:
         default: Glue script S3 bucket
       IntegrationBus:
         default: Integration bus
+      DemoMode:
+        default: Demo mode
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -49,6 +52,9 @@ Metadata:
         default: Quick Start S3 bucket Region
 
 Parameters:
+  DemoMode:
+    Type: String
+    Description: 'Enable/disable the demo mode.'
   StagingDataBucket:
     Type: String
     Description: 'S3 bucket to store staging data.'
@@ -85,7 +91,7 @@ Parameters:
     ConstraintDescription: >-
       Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
-    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
     Type: String
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
@@ -99,6 +105,7 @@ Parameters:
       See https://aws-quickstart.github.io/option1.html.'
     Type: String
 
+
 Resources:
   IngestionMeterReadingDataflowStack:
     Type: 'AWS::CloudFormation::Stack'
@@ -108,7 +115,7 @@ Resources:
         - S3Region:
             !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
           S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
         StagingDataBucket: !Ref StagingDataBucket
         IntegrationBus: !Ref IntegrationBus
@@ -124,7 +131,7 @@ Resources:
         - S3Region:
             !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
           S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
         StagingRecordsStream: !GetAtt IngestionMeterReadingDataflowStack.Outputs.StagingRecordsStream
         QSS3BucketName: !Ref QSS3BucketName
@@ -139,10 +146,47 @@ Resources:
         - S3Region:
             !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
           S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
         StagingDataBucket: !Ref StagingDataBucket
         IntegratedDataBucket: !Ref IntegratedDataBucket
         GlueStagingDatabase: !Ref GlueStagingDatabase
         GlueIntegratedDatabase: !Ref GlueIntegratedDatabase
         MdaGlueScriptBucket: !Ref MdaGlueScriptBucket
+
+  # This stack loads the historic demo data
+  MeterringDataflowInputHistoricStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: DemoMode
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.input.historic.template.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      Parameters:
+        StagingDataBucket: !Ref StagingDataBucket
+        InboundDataBucket: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundDataBucket
+        MdaGlueScriptBucket: !Ref MdaGlueScriptBucket
+        StagingGlueWorkflow: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.StagingGlueWorkflow
+        StagingDatabaseName: !Ref GlueStagingDatabase
+        StagingTableName: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.GlueTableStagingName
+
+  MeterringDataflowDemoUtilityStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: DemoMode
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.input.demo.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      Parameters:
+        StagingDataBucket: !Ref StagingDataBucket
+        StagingGlueWorkflow: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.StagingGlueWorkflow
+        InboundQueueName: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundFileRangeQueueName
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion

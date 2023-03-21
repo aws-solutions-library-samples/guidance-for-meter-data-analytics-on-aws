@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "This Stack is only deployed in DEMO mode. It creates some utility resources to provide a better user experience. (qs-1r18anahd)"
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9007
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingGlueWorkflow
+          - InboundQueueName
+          - StagingDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+    ParameterLabels:
+      StagingDataBucket:
+        default: Staging S3 bucket
+      StagingGlueWorkflow:
+        default: Staging Glue workflow
+      InboundQueueName:
+        default: Inbound Queue Name
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start Region
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: Staging S3 bucket
+  InboundQueueName:
+    Type: String
+    Description: Inbound queue name
+  StagingGlueWorkflow:
+    Type: String
+    Description: Staging Glue workflow
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Resources:
+  InboundQueueCheckEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Triggers inbound queue check state machine"
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref StagingDataBucket
+          object:
+            key:
+              - prefix: "readings/json/"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Ref QueueStatusStateMachine
+          Id: "inbound_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+  IsQueueEmptyLambda:
+    Type: 'AWS::Serverless::Function'
+    Description: "Checks if an SQS queue is empty."
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/sqs_status_check/lambda.zip'
+      MemorySize: 128
+      Timeout: 10
+      Runtime: python3.9
+      Role: !GetAtt SQSPollerRole.Arn
+      Environment:
+        Variables:
+          QUEUE_NAME: !Ref InboundQueueName
+
+  QueueStatusStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        Comment: A description of my state machine
+        StartAt: Is Queue empty
+        States:
+          Is Queue empty:
+            Type: Choice
+            Choices:
+              - And:
+                  - Variable: "$.queue_empty"
+                    IsPresent: true
+                  - Variable: "$.queue_empty"
+                    BooleanEquals: true
+                Next: StartWorkflowRun
+            Default: Wait
+          Wait:
+            Type: Wait
+            Seconds: 20
+            Next: IsSqsEmpty
+          StartWorkflowRun:
+            Type: Task
+            End: true
+            Parameters:
+              Name: !Ref StagingGlueWorkflow
+            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startWorkflowRun"
+          IsSqsEmpty:
+            Type: Task
+            Resource: !Sub "arn:${AWS::Partition}:states:::lambda:invoke"
+            OutputPath: "$.Payload"
+            Parameters:
+              Payload.$: "$"
+              FunctionName: !Ref IsQueueEmptyLambda
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 2
+                MaxAttempts: 6
+                BackoffRate: 2
+            Next: Is Queue empty
+      Role: !GetAtt StepFunctionQueueStatusRole.Arn
+
+  #
+  # IAM
+  #
+  SQSPollerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: sqs_poller
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "sqs:ChangeMessageVisibility"
+                  - "sqs:ChangeMessageVisibilityBatch"
+                  - "sqs:DeleteMessage"
+                  - "sqs:DeleteMessageBatch"
+                  - "sqs:GetQueueAttributes"
+                  - "sqs:ReceiveMessage"
+                  - "sqs:GetQueueUrl"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${InboundQueueName}"
+
+  StepFunctionQueueStatusRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+                - glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: invoke_lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: !GetAtt IsQueueEmptyLambda.Arn
+        - PolicyName: start_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:StartWorkflowRun
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_state_machine
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref QueueStatusStateMachine
