@@ -1,3 +1,7 @@
-## Utility Meter Data Analytics Quick Start
+# Utility Meter Data Analytics on AWS—AWS Solution
 
-This Quick Start deploys the Meter Data Analytics (MDA) Platform on the AWS Cloud. The MDA helps utilities tap the unrealized value of energy consumption data like load prediction on the household, circuit, and distribution system level, deeper customer engagement through proactive notifications, predictive maintenance on distribution assets, circuit quality analytics, and much more while removing undifferentiated heavy lifting for utilities. AWS MDA uses a data lake and machine learning capabilities to store the incoming meter reads, analyze them, and provide valuable insights.
+For architectural details, step-by-step instructions, and customization options, refer to the [deployment guide](https://fwd.aws/eKxzz?).
+
+To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
+
+To submit code for this Partner Solution, see the [AWS Partner Solution Contributor's Guide](https://fwd.aws/NwqYA?).
