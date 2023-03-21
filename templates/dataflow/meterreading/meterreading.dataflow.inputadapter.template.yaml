@@ -151,7 +151,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       CodeUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub:
             - '${QSS3KeyPrefix}functions/packages/${ExtractorFunction}/lambda.zip'
@@ -193,7 +193,7 @@ Resources:
       LayerName: !Sub "kinesis-producer-layer-${AWS::Region}"
       Description: Dependencies for topology transform lambda
       ContentUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub: '${QSS3KeyPrefix}scripts/layers/kinesis_producer/layer.zip'
       CompatibleRuntimes:
@@ -206,7 +206,7 @@ Resources:
       Description: "Function to extract reads from inbound file on given range"
       Handler: app.lambda_handler
       CodeUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub:
             - '${QSS3KeyPrefix}functions/packages/${WorkerFunction}/lambda.zip'
