@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  Imports batch of historic data vis Glue from inbound to staging (qs-1r18anahd)
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - InboundDataBucket
+          - MdaGlueScriptBucket
+          - StagingGlueWorkflow
+          - StagingTableName
+          - StagingDatabaseName
+    ParameterLabels:
+      StagingDataBucket:
+        default: Staging data bucket
+      InboundDataBucket:
+        default: Inbound data bucket
+      MdaGlueScriptBucket:
+        default: Glue script bucket
+      StagingGlueWorkflow:
+        default: Staging Glue workflows
+      StagingDatabaseName:
+        default: Staging Database Name
+      StagingTableName:
+        default: Staging Table Name
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'Staging Data Bucket'
+  InboundDataBucket:
+    Type: String
+    Description: 'Inbound Data Bucket'
+  MdaGlueScriptBucket:
+    Type: String
+    Description: 'Glue script bucket'
+  StagingGlueWorkflow:
+    Type: String
+    Description: 'Staging Glue workflow'
+  StagingTableName:
+    Type: String
+    Description: "Glue Table Staging Name"
+  StagingDatabaseName:
+    Type: String
+    Description: "Glue Database Staging Name"
+
+Resources:
+
+  #
+  # Glue Jobs
+  #
+  InboundMeterReadingsGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: inbound-historic-meterreadings
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/meterreadings-inbound-historic-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-auto-scaling: "true"
+        --INBOUND_BUCKET: !Ref InboundDataBucket
+        --STAGING_BUCKET: !Ref StagingDataBucket
+        --MDA_DATABASE_STAGING: !Ref StagingDatabaseName
+        --STAGING_TABLE_NAME: !Ref StagingTableName
+      MaxRetries: 0
+      NumberOfWorkers: 250
+      WorkerType: G.1X
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: "4.0"
+
+  #
+  # Glue Workflow
+  #
+  InboundReadingGlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties:
+      Description: Inbound historic meter reading Glue workflow to move data from inbound to staging zone.
+
+  GlueWorkflowTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Actions:
+        - JobName: !Ref InboundMeterReadingsGlueJob
+      Type: EVENT
+      Description: "A event trigger for the glue workflow."
+      WorkflowName: !Ref InboundReadingGlueWorkflow
+
+
+  #
+  # Event Trigger
+  #
+  GlueInboundEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Inbound Historic Glue Workflow Trigger"
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref InboundDataBucket
+          object:
+            key:
+              - prefix: "data/historic/"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${InboundReadingGlueWorkflow}"
+          Id: "inbound_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+
+  GlueStagingToIntegratedTriggerEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Trigger Staging to Integrated Job after historic data are imported"
+      EventPattern:
+        source:
+          - "aws.glue"
+        detail-type:
+          - "Glue Job State Change"
+        detail:
+          jobName:
+            - !Ref InboundMeterReadingsGlueJob
+          state:
+            - "SUCCEEDED"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+          Id: "intyegrate_glue_workflow_trigger"
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+  #
+  # IAM
+  #
+  EventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub events.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: trigger_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "glue:notifyEvent"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${InboundReadingGlueWorkflow}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchFullAccess'
+
+  S3MeterReadingBucketAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-glue-meterreading-bucket-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${InboundDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${InboundDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
+          - Effect: Allow
+            Action:
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+              - 'glue:BatchCreatePartition'
+              - 'glue:BatchGetPartition'
+              - 'glue:BatchUpdatePartition'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${StagingDatabaseName}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${StagingDatabaseName}/meter_readings_staging_json"
+      Roles:
+        - !Ref GlueJobRole
+

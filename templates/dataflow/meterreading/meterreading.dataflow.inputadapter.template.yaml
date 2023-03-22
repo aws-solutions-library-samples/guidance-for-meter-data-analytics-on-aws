@@ -19,6 +19,7 @@ Metadata:
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       StagingRecordsStream:
         default: Kinesis Stream reference
@@ -34,6 +35,8 @@ Metadata:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
 
 Parameters:
   StagingRecordsStream:
@@ -41,9 +44,9 @@ Parameters:
     Description: 'Stream reference that pushes data to the staging area.'
   MaxNumberOfWorkers:
     Type: Number
-    Default: 70
+    Default: 150
     MinValue: 1
-    MaxValue: 100
+    MaxValue: 400
     Description: 'Max number of workers to process files chunks.'
   SuggestedRangesPerWorker:
     Type: Number
@@ -54,7 +57,6 @@ Parameters:
     Type: String
     Default: csv
     AllowedValues:
-      - mrasco
       - csv
     Description: 'Different adapter implementation.'
   WorkerMemorySize:
@@ -69,7 +71,7 @@ Parameters:
     ConstraintDescription: >-
       Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
-    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
     Type: String
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
@@ -88,9 +90,26 @@ Parameters:
       It cannot start or end with a hyphen (-).
     Type: String
 
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
 Outputs:
   InboundDataBucket:
     Value: !Ref InboundDataBucket
+  InboundFileRangeQueueName:
+    Value: !GetAtt InboundFileRangeQueue.QueueName
+
+Mappings:
+  AdapterFunctions:
+    csv:
+      RangeExtractorFunctionName: adapter_csv_inbound_file_range_extractor
+      WorkerFunctionName: adapter_csv_inbound_file_range_worker
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
@@ -137,11 +156,17 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       CodeUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_extractor/lambda.zip'
-      MemorySize: 512
-      Timeout: 300
+          Fn::Sub:
+            - '${QSS3KeyPrefix}functions/packages/${ExtractorFunction}/lambda.zip'
+            - ExtractorFunction:
+                Fn::FindInMap:
+                  - AdapterFunctions
+                  - !Ref Adapter
+                  - 'RangeExtractorFunctionName'
+      MemorySize: 3008
+      Timeout: 900
       Runtime: python3.9
       Role: !GetAtt 'RunRangeExtractorLambdaRole.Arn'
       Layers:
@@ -149,9 +174,7 @@ Resources:
       Environment:
         Variables:
           range_queue_url: !Ref InboundFileRangeQueue
-          worker_memory: !Ref WorkerMemorySize
           max_workers: !Ref MaxNumberOfWorkers
-          suggested_workers: !Ref SuggestedRangesPerWorker
       Events:
         InboundDataArrived:
           Type: EventBridgeRule
@@ -167,7 +190,7 @@ Resources:
                     - !Ref InboundDataBucket
                 object:
                   key:
-                    - prefix: "data/uncompressed/"
+                    - prefix: !Sub "data/uncompressed/${Adapter}/"
 
   KinesisProducerDependencyLayer:
     Type: 'AWS::Serverless::LayerVersion'
@@ -175,7 +198,7 @@ Resources:
       LayerName: !Sub "kinesis-producer-layer-${AWS::Region}"
       Description: Dependencies for topology transform lambda
       ContentUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub: '${QSS3KeyPrefix}scripts/layers/kinesis_producer/layer.zip'
       CompatibleRuntimes:
@@ -188,9 +211,15 @@ Resources:
       Description: "Function to extract reads from inbound file on given range"
       Handler: app.lambda_handler
       CodeUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/adapter_${Adapter}_inbound_file_range_worker/lambda.zip'
+          Fn::Sub:
+            - '${QSS3KeyPrefix}functions/packages/${WorkerFunction}/lambda.zip'
+            - WorkerFunction:
+                Fn::FindInMap:
+                  - AdapterFunctions
+                  - !Ref Adapter
+                  - 'WorkerFunctionName'
       Runtime: python3.9
       MemorySize: !Ref WorkerMemorySize
       Timeout: 720
@@ -206,7 +235,7 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt InboundFileRangeQueue.Arn
-            BatchSize: 2
+            BatchSize: 1
   #
   # IAM Roles
   #

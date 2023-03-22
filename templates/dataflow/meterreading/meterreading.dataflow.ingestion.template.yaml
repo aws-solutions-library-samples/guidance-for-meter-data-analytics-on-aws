@@ -46,7 +46,7 @@ Parameters:
     ConstraintDescription: >-
       Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
-    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
     Type: String
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
@@ -110,6 +110,10 @@ Resources:
         ProcessingConfiguration:
           Enabled: true
           Processors:
+            - Type: RecordDeAggregation
+              Parameters:
+                - ParameterName: SubRecordType
+                  ParameterValue: JSON
             - Type: MetadataExtraction
               Parameters:
                 - ParameterName: MetadataExtractionQuery

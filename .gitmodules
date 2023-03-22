@@ -1,11 +1,3 @@
-[submodule "submodules/quickstart-aws-vpc"]
-	path = submodules/quickstart-aws-vpc
-	url = https://github.com/aws-quickstart/quickstart-aws-vpc.git
-	branch = main
-[submodule "submodules/quickstart-amazon-redshift"]
-	path = submodules/quickstart-amazon-redshift
-	url = https://github.com/aws-quickstart/quickstart-amazon-redshift.git
-	branch = main
-[submodule "submodules/quickstart-aws-utility-meter-data-generator"]
-	path = submodules/quickstart-aws-utility-meter-data-generator
-	url = git@github.com:aws-quickstart/quickstart-aws-utility-meter-data-generator.git
+[submodule "submodules/quickstart-aws-utility-meter-headend-system-simulator"]
+	path = submodules/quickstart-aws-utility-meter-headend-system-simulator
+	url = git@github.com:aws-quickstart/quickstart-aws-utility-meter-headend-system-simulator.git
