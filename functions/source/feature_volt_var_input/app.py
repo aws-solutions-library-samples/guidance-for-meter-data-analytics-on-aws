@@ -21,7 +21,7 @@ def lambda_handler(event, context):
                                  region_name=region).cursor()
 
     tic = time.perf_counter()
-    transformer_cursor.execute(f"SELECT id FROM {glue_integrated_db}.topology_data_integrated_distribution_transformer")
+    transformer_cursor.execute(f"SELECT id FROM {glue_integrated_db}.topology_data_integrated_distribution_transformer") # nosec B608
     toc = time.perf_counter()
     logging.info(f"Query time in {toc - tic:0.4f} seconds")
 

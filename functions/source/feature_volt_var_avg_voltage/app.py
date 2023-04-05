@@ -45,7 +45,7 @@ def record_handler(record: SQSRecord):
         reference_time = item["reference_time"]
 
         tic = time.perf_counter()
-        avg_vltg_cursor.execute(
+        avg_vltg_cursor.execute( # nosec
             f"""SELECT avg(reading_value) FROM {get_integrated_db()}.meter_readings_integrated_parquet 
                     WHERE reading_date_time between 
                         DATE_ADD('hours', -1, parse_datetime(%(reference_time)s,'yyyy-MM-dd HH:mm:ss.SSS')) AND parse_datetime(%(reference_time)s,'yyyy-MM-dd HH:mm:ss.SSS')
