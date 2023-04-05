@@ -24,9 +24,8 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-headend-system-simulator/templates/headend.system.simulator.main.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
         GenerationState: 'ENABLED'
         GenerationInterval: !Ref GenerationInterval
@@ -35,8 +34,6 @@ Resources:
         LateArrivalSimulate: 'DISABLED'
         LateArrivalPercent: 10
         LateArrivalMinuteOffset: 1440
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-headend-system-simulator/'
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
   IntegrationStack:
@@ -149,6 +146,8 @@ Resources:
           S3Bucket:
             !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
+        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
@@ -186,13 +185,13 @@ Parameters:
   GenerationInterval:
     Description: Interval between meter reads in minutes, minimum of five.
     Type: Number
-    Default: 5
+    Default: 15
     MinValue: 5
     ConstraintDescription: Interval must be at least five minutes.
   TotalDevices:
     Description: Number of devices to generate readings at each interval.
     Type: Number
-    Default: 50000
+    Default: 10000
   QSS3BucketName:
     AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
     ConstraintDescription: >-
