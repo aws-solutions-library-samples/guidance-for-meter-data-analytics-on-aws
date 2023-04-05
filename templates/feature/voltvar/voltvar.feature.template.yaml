@@ -13,17 +13,32 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: 'Feature configuration'
+        Parameters:
+          - GlueIntegratedDatabase
+          - IntegratedDataBucket
+      - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
+      GlueIntegratedDatabase:
+        default: Glue integration database Name
+      IntegratedDataBucket:
+        default: Integrated data bucket name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
 
 Parameters:
+  GlueIntegratedDatabase:
+    Type: String
+    Description: Glue integration database Name
+  IntegratedDataBucket:
+    Type: String
+    Description: Integrated data bucket name
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -48,7 +63,7 @@ Parameters:
       forward slash (/).
 
 Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Globals:
   Function:
@@ -57,14 +72,14 @@ Globals:
       Variables:
         LOG_LEVEL: INFO
 
-
-
 Resources:
+  VoltVarBucket:
+    Type: AWS::S3::Bucket
+
   VoltVarTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: VoltVarTable
-
 
   VoltVarInputSelector:
     Type: AWS::Serverless::Function
@@ -82,10 +97,10 @@ Resources:
         - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
         Variables:
+          volt_var_bucket: !Ref VoltVarBucket
           volt_var_input_queue: !GetAtt VoltVarInputQueue.QueueName
-      Policies:
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt VoltVarInputQueue.QueueName
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+      Role: !GetAtt LambdaVoltVarRole.Arn
       #Events: Add trigger once an hour
 
   VoltVarAvgVoltagePerTransformerMeterGroup:
@@ -106,16 +121,15 @@ Resources:
       Environment:
         Variables:
           volt_var_calculation_queue: !GetAtt VoltVarCalculationQueue.QueueName
-      Policies:
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt VoltVarCalculationQueue.QueueName
-        - SQSPollerPolicy:
-            QueueName: !GetAtt VoltVarInputQueue.QueueName
+          volt_var_bucket: !Ref VoltVarBucket
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+      Role: !GetAtt LambdaVoltVarRole.Arn
       Events:
         Batch:
           Type: SQS
           Properties:
             Queue: !GetAtt VoltVarInputQueue.Arn
+            BatchSize: 1
             FunctionResponseTypes:
               - ReportBatchItemFailures
 
@@ -130,12 +144,17 @@ Resources:
           Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_calculator/lambda.zip'
       Timeout: 30
       MemorySize: 128
+      Layers:
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
         Variables:
           DYNAMO_TABLE: !Ref VoltVarTable
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt VoltVarCalculationQueue.QueueName
+        - DynamoDBWritePolicy:
+            TableName: !Ref VoltVarTable
       Events:
         Batch:
           Type: SQS
@@ -178,3 +197,154 @@ Resources:
       RedrivePolicy:
         maxReceiveCount: 2
         deadLetterTargetArn: !GetAtt VoltVarCalculationDLQ.Arn
+
+  LambdaVoltVarRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: sqs_poller
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "athena:StartQueryExecution"
+                  - "athena:GetQueryExecution"
+                  - "athena:GetQueryResults"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:AbortMultipartUpload"
+                  - "s3:CreateBucket"
+                  - "s3:ListBucket"
+                  - "s3:DeleteObject"
+                  - "s3:GetBucketLocation"
+                  - "s3:ListMultipartUploadParts"
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${VoltVarBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${VoltVarBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
+              - Effect: Allow
+                Action:
+                  - "sqs:SendMessage"
+                  - "sqs:DeleteMessage"
+                  - "sqs:DeleteMessageBatch"
+                  - "sqs:GetQueueAttributes"
+                  - "sqs:ReceiveMessage"
+                  - "sqs:GetQueueUrl"
+                  - "sqs:ChangeMessageVisibility"
+                  - "sqs:ChangeMessageVisibilityBatch"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${VoltVarInputQueue.QueueName}"
+                  - !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${VoltVarCalculationQueue.QueueName}"
+              - Effect: Allow
+                Action:
+                  - 'glue:GetTable'
+                  - 'glue:GetTables'
+                  - 'glue:GetPartition'
+                  - 'glue:GetPartitions'
+                  - 'glue:BatchGetPartition'
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/topology_data_integrated_*"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_*"
+
+  ##
+  ## Bucket Cleanup
+  ##
+
+  VoltVarCustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: lambda-copier
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListObjectVersions
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:DeleteObjects
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAttributes
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - s3:GetBucketVersioning
+                  - s3:GetBucketVersion
+                  - s3:ListObjectVersionsing
+                  - s3:ListObjectVersions
+                  - s3:DeleteObjectVersion
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${VoltVarBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${VoltVarBucket}'
+
+  VoltVarCustomResourceInvoke:
+    Type: Custom::VoltVarCustomResource
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt VoltVarCustomResourceFunction.Arn
+      DestBucket: !Ref VoltVarBucket
+
+  VoltVarCustomResourceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt VoltVarCustomResourceRole.Arn
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 240
+      ReservedConcurrentExecutions: 1
+      Handler: 'app.lambda_handler'
+      Layers:
+        - !Ref CrhelperLayer
+      Code:
+        S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        S3Key: !Sub '${QSS3KeyPrefix}functions/packages/s3_copy_custom_resource/lambda.zip'
+
+  CrhelperLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: 'Crhelper'
+      Description: 'Crhelper'
+      CompatibleRuntimes:
+        - 'python3.9'
+      CompatibleArchitectures:
+        - 'x86_64'
+      Content:
+        S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        S3Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/crhelper.zip'
+      LicenseInfo: 'Apache 2.0'
