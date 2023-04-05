@@ -51,6 +51,25 @@ Parameters:
 
 Resources:
 
+  DelayedStagingWorkflowStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        Comment: Delayed start of a glue workflow
+        StartAt: Wait
+        States:
+          Wait:
+            Type: Wait
+            Seconds: 30
+            Next: StartWorkflowRun
+          StartWorkflowRun:
+            Type: Task
+            End: true
+            Parameters:
+              Name: !Ref StagingGlueWorkflow
+            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startWorkflowRun"
+      Role: !GetAtt StepFunctionQueueStatusRole.Arn
+
   #
   # Glue Jobs
   #
@@ -142,13 +161,37 @@ Resources:
             - "SUCCEEDED"
       State: "ENABLED"
       Targets:
-        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
-          Id: "intyegrate_glue_workflow_trigger"
+        - Arn: !Ref DelayedStagingWorkflowStateMachine
+          Id: "delayed_staging_workflow_sm"
           RoleArn: !GetAtt EventBridgeRole.Arn
 
   #
   # IAM
   #
+  StepFunctionQueueStatusRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+                - glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: start_glue_workflow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:StartWorkflowRun
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -161,16 +204,14 @@ Resources:
             Action: 'sts:AssumeRole'
       Path: /
       Policies:
-        - PolicyName: trigger_glue_workflow
+        - PolicyName: trigger_state_machine
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action:
-                  - "glue:notifyEvent"
-                Resource:
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${InboundReadingGlueWorkflow}"
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+                  - "states:StartExecution"
+                Resource: !Ref DelayedStagingWorkflowStateMachine
 
 
   GlueJobRole:
