@@ -25,6 +25,7 @@ Resources:
           - meterreadings-integration-job.py
           - weatherdata-integration-job.py
           - meterreadings-late-reads-cleanup-job.py
+          - meterreadings-inbound-historic-job.py
 
     CopyArtifactsRole:
       Type: AWS::IAM::Role
