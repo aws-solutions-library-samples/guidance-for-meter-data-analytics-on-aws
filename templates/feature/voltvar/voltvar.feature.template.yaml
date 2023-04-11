@@ -221,9 +221,6 @@ Resources:
                   - "athena:StartQueryExecution"
                   - "athena:GetQueryExecution"
                   - "athena:GetQueryResults"
-                Resource: "*"
-              - Effect: Allow
-                Action:
                   - "s3:PutObject"
                   - "s3:GetObject"
                   - "s3:ListBucketMultipartUploads"
