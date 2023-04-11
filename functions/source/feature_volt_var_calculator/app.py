@@ -1,51 +1,60 @@
 import json
 import boto3
 import os
-import logging
 from time import time
+from decimal import Decimal
+
+from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools.utilities.batch import BatchProcessor, EventType, batch_processor
+from aws_lambda_powertools.utilities.data_classes.sqs_event import SQSRecord
+from aws_lambda_powertools.utilities.typing import LambdaContext
+
+processor = BatchProcessor(event_type=EventType.SQS)
+tracer = Tracer()
+logger = Logger()
 
 dynamodb = boto3.resource('dynamodb')
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+
+def get_table_name():
+    return os.getenv("DYNAMO_TABLE")
 
 
-def write_records(item, table_name):
-    table = dynamodb.Table(table_name)
+def write_records(item):
+    table = dynamodb.Table(get_table_name())
     try:
         table.put_item(
             Item=item
         )
     except Exception as err:
-        logging.error(err)
+        logger.error(err)
 
 
-def lambda_handler(event, context):
-    logging.info(event)
+@tracer.capture_method
+def record_handler(record: SQSRecord):
+    payload: str = record.body
 
-    dynamo_table = os.getenv("DYNAMO_TABLE")
+    if payload:
+        item: dict = json.loads(payload)
 
-    milliseconds = int(time() * 1000)
+        milliseconds = int(time() * 1000)
 
-    default_set_point = 220.0  # TODO externalize
+        default_set_point = 220.0  # TODO externalize
 
-    # average V per distribution trans (avg feeder voltage)
-    # 120 = default set point (depends on country) (avg from simulator)
-    # between 3 or 4 volts
+        # average V per distribution trans (avg feeder voltage)
+        # 120 = default set point (depends on country) (avg from simulator)
+        # between 3 or 4 volts
 
-    cvr = 0.8  # TODO externalize
-    energy_purchase_price = 0.11  # TODO externalize
-    electricity_rate = 11  # TODO externalize
-    num_cust = 1000  # TODO externalize
-    carbon_savings_per_mwh = 900.0  # TODO externalize
+        cvr = 0.8  # TODO externalize
+        energy_purchase_price = 0.11  # TODO externalize
+        electricity_rate = 11  # TODO externalize
+        num_cust = 1000  # TODO externalize
+        carbon_savings_per_mwh = 900.0  # TODO externalize
 
-    mw_level = 1
+        mw_level = 1
 
-    for record in event['Records']:
-        payload = json.loads(record["body"])
-
-        device_id = payload["serviceTransformerId"]
-        mean_voltage = payload["meanVoltage"]
+        device_id = item["distribution_transformer_id"]
+        mean_voltage = item["mean_voltage"]
 
         set_point_read = float(mean_voltage)
         pct_volt_red = round((default_set_point - set_point_read) * 100 / (default_set_point * 12), 9)
@@ -58,17 +67,21 @@ def lambda_handler(event, context):
         item = {
             'id': f'{device_id}_{milliseconds}',
             'device_id': device_id,
-            'pct_voltage_reduction': pct_volt_red,
-            'pct_energy_savings': pct_energy_savings,
-            'actual_energy_savings': actual_energy_savings,
-            'cost_avoided': cost_avoided,
-            'cust_dollar_savings': cust_dollar_savings,
-            'carbon_reduction_lbs': carbon_reduction_lbs
+            'pct_voltage_reduction': Decimal(str(pct_volt_red)),
+            'pct_energy_savings': Decimal(str(pct_energy_savings)),
+            'actual_energy_savings': Decimal(str(actual_energy_savings)),
+            'cost_avoided': Decimal(str(cost_avoided)),
+            'cust_dollar_savings': Decimal(str(cust_dollar_savings)),
+            'carbon_reduction_lbs': Decimal(str(carbon_reduction_lbs))
         }
-        logging.info(item)
+        logger.debug(item)
 
-        write_records(item, dynamo_table)
+        write_records(item)
 
-    return {
-        'statusCode': 200,
-    }
+
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
+@batch_processor(record_handler=record_handler, processor=processor)
+def lambda_handler(event, context: LambdaContext):
+    logger.info(event)
+    return processor.response()

@@ -57,6 +57,11 @@
                   "Variable": "$.run_detail.state",
                   "StringMatches": "*skipped",
                   "Next": "Set idle status and next_eligible on integrations Db Record"
+                },
+                {
+                  "Variable": "$.run_detail.state",
+                  "StringMatches": "*failed",
+                  "Next": "Fail"
                 }
               ],
               "Default": "Wait"
