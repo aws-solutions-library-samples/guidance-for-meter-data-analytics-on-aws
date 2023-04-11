@@ -96,7 +96,7 @@ Resources:
           object:
             key:
               - prefix: "readings/json/"
-      State: "ENABLED"
+      State: "DISABLED"
       Targets:
         - Arn: !Ref QueueStatusStateMachine
           Id: "inbound_glue_workflow_trigger"
