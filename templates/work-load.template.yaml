@@ -34,6 +34,7 @@ Resources:
         LateArrivalSimulate: 'DISABLED'
         LateArrivalPercent: 10
         LateArrivalMinuteOffset: 1440
+        QSS3BucketName: !Sub 'aws-quickstart-${AWS::Region}'
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
   IntegrationStack:
