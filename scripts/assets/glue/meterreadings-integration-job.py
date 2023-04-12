@@ -18,13 +18,9 @@ job.init(args["JOB_NAME"], args)
 gyf = glueContext.create_dynamic_frame.from_options(
     connection_type="s3",
     connection_options={
-        "paths": [f"s3://{args['MDA_STAGING_BUCKET']}/readings/json/"],
-        "recurse": True
+        "paths": [f"s3://{args['MDA_STAGING_BUCKET']}/readings/json/"]
     },
     format="json", transformation_ctx="dyf",
-    format_options={
-        "optimizePerformance": True
-    })
 
 # Script generated for node ApplyMapping
 ApplyMapping_node2 = ApplyMapping.apply(
