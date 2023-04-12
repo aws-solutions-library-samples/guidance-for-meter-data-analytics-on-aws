@@ -14,7 +14,6 @@ Metadata:
         Parameters:
           - StagingGlueWorkflow
           - InboundQueueName
-          - StagingDataBucket
           - InboundDataBucket
       - Label:
           default: 'AWS Quick Start configuration'
@@ -25,8 +24,6 @@ Metadata:
     ParameterLabels:
       InboundDataBucket:
         default: Inbound S3 bucket
-      StagingDataBucket:
-        default: Staging S3 bucket
       StagingGlueWorkflow:
         default: Staging Glue workflow
       InboundQueueName:
@@ -42,9 +39,6 @@ Parameters:
   InboundDataBucket:
     Type: String
     Description: Inbound S3 Bucket
-  StagingDataBucket:
-    Type: String
-    Description: Staging S3 bucket
   InboundQueueName:
     Type: String
     Description: Inbound queue name
