@@ -15,6 +15,7 @@ Metadata:
           - StagingGlueWorkflow
           - InboundQueueName
           - StagingDataBucket
+          - InboundDataBucket
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -22,6 +23,8 @@ Metadata:
           - QSS3KeyPrefix
           - QSS3BucketRegion
     ParameterLabels:
+      InboundDataBucket:
+        default: Inbound S3 bucket
       StagingDataBucket:
         default: Staging S3 bucket
       StagingGlueWorkflow:
@@ -36,6 +39,9 @@ Metadata:
         default: Quick Start Region
 
 Parameters:
+  InboundDataBucket:
+    Type: String
+    Description: Inbound S3 Bucket
   StagingDataBucket:
     Type: String
     Description: Staging S3 bucket
@@ -92,11 +98,11 @@ Resources:
         detail:
           bucket:
             name:
-              - !Ref StagingDataBucket
+              - !Ref InboundDataBucket
           object:
             key:
-              - prefix: "readings/json/"
-      State: "DISABLED"
+              - prefix: !Sub "data/uncompressed/csv/"
+      State: ENABLED
       Targets:
         - Arn: !Ref QueueStatusStateMachine
           Id: "inbound_glue_workflow_trigger"
@@ -123,8 +129,12 @@ Resources:
     Properties:
       Definition:
         Comment: A description of my state machine
-        StartAt: Is Queue empty
+        StartAt: Initial Wait
         States:
+          Initial Wait:
+            Type: Wait
+            Seconds: 45
+            Next: IsSqsEmpty
           Is Queue empty:
             Type: Choice
             Choices:
