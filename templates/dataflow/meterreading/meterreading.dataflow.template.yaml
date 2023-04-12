@@ -187,6 +187,7 @@ Resources:
         StagingDataBucket: !Ref StagingDataBucket
         StagingGlueWorkflow: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.StagingGlueWorkflow
         InboundQueueName: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundFileRangeQueueName
+        InboundDataBucket: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundDataBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
