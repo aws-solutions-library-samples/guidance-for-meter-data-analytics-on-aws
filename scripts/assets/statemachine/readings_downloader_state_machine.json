@@ -66,6 +66,9 @@
               ],
               "Default": "Wait"
             },
+            "Fail": {
+              "Type": "Fail"
+            },
             "Wait": {
               "Type": "Wait",
               "Seconds": 10,

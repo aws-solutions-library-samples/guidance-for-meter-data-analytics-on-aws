@@ -14,7 +14,8 @@ Metadata:
         Parameters:
           - StagingGlueWorkflow
           - InboundQueueName
-          - StagingDataBucket
+          - InboundDataBucket
+          - IntegrateMeterReadingsGlueJob
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -22,12 +23,14 @@ Metadata:
           - QSS3KeyPrefix
           - QSS3BucketRegion
     ParameterLabels:
-      StagingDataBucket:
-        default: Staging S3 bucket
+      InboundDataBucket:
+        default: Inbound S3 bucket
       StagingGlueWorkflow:
         default: Staging Glue workflow
       InboundQueueName:
         default: Inbound Queue Name
+      IntegrateMeterReadingsGlueJob:
+        default: Glue job name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -36,15 +39,18 @@ Metadata:
         default: Quick Start Region
 
 Parameters:
-  StagingDataBucket:
+  InboundDataBucket:
     Type: String
-    Description: Staging S3 bucket
+    Description: Inbound S3 Bucket
   InboundQueueName:
     Type: String
     Description: Inbound queue name
   StagingGlueWorkflow:
     Type: String
     Description: Staging Glue workflow
+  IntegrateMeterReadingsGlueJob:
+    Type: String
+    Description: Glue Job name
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
     ConstraintDescription: >-
@@ -92,11 +98,11 @@ Resources:
         detail:
           bucket:
             name:
-              - !Ref StagingDataBucket
+              - !Ref InboundDataBucket
           object:
             key:
-              - prefix: "readings/json/"
-      State: "DISABLED"
+              - prefix: !Sub "data/uncompressed/csv/"
+      State: ENABLED
       Targets:
         - Arn: !Ref QueueStatusStateMachine
           Id: "inbound_glue_workflow_trigger"
@@ -123,8 +129,12 @@ Resources:
     Properties:
       Definition:
         Comment: A description of my state machine
-        StartAt: Is Queue empty
+        StartAt: Initial Wait
         States:
+          Initial Wait:
+            Type: Wait
+            Seconds: 45
+            Next: IsSqsEmpty
           Is Queue empty:
             Type: Choice
             Choices:
@@ -196,6 +206,11 @@ Resources:
                   - "sqs:GetQueueUrl"
                 Resource:
                   - !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${InboundQueueName}"
+              - Effect: Allow
+                Action:
+                  - glue:GetJobRuns
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${IntegrateMeterReadingsGlueJob}"
 
   StepFunctionQueueStatusRole:
     Type: 'AWS::IAM::Role'

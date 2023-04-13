@@ -47,6 +47,8 @@ Outputs:
     Value: !Ref MeterReadingIntegrationGlueWorkflow
   GlueTableStagingName:
     Value: !Ref GlueTableStaging
+  IntegrateMeterReadingsGlueJob:
+    Value: !Ref IntegrateMeterReadingsGlueJob
 
 Resources:
   #
