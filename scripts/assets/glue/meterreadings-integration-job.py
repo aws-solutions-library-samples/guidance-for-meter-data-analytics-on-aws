@@ -6,7 +6,9 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 import pandas as pd
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "MDA_DATABASE_STAGING", "MDA_DATABASE_INTEGRATED", "STAGING_TABLE_NAME", "TARGET_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
+args = getResolvedOptions(sys.argv,
+                          ["JOB_NAME", "MDA_DATABASE_STAGING", "MDA_DATABASE_INTEGRATED", "STAGING_TABLE_NAME",
+                           "TARGET_TABLE_NAME", "INTEGRATED_BUCKET_NAME"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
@@ -18,7 +20,7 @@ DataCatalogtable_node1 = glueContext.create_dynamic_frame.from_catalog(
     database=args["MDA_DATABASE_STAGING"],
     table_name=args["STAGING_TABLE_NAME"],
     transformation_ctx="DataCatalogtable_node1",
-    additional_options = {'useS3ListImplementation': True}
+    additional_options={'useS3ListImplementation': True}
 )
 
 # Script generated for node ApplyMapping
@@ -41,11 +43,13 @@ ApplyMapping_node2 = ApplyMapping.apply(
     transformation_ctx="ApplyMapping_node2",
 )
 
+
 def parse_date(df):
     dt = pd.to_datetime(df["reading_date_time"]).dt.strftime('%Y-%m-%d %H:%M:%S.%f')
     return dt
 
-CustomMapping_node3 = Map.apply(frame = ApplyMapping_node2 , f = parse_date, transformation_ctx = "custommapping1")
+
+CustomMapping_node3 = Map.apply(frame=ApplyMapping_node2, f=parse_date, transformation_ctx="CustomMapping_node3")
 
 # # Script generated for node S3 bucket
 # S3bucket_node3 = glueContext.write_dynamic_frame.from_options(
@@ -63,16 +67,16 @@ CustomMapping_node3 = Map.apply(frame = ApplyMapping_node2 , f = parse_date, tra
 # )
 
 write_sink = glueContext.getSink(
-    path="s3://"+args["INTEGRATED_BUCKET_NAME"]+"/readings/parquet/",
+    path="s3://" + args["INTEGRATED_BUCKET_NAME"] + "/readings/parquet/",
     connection_type="s3",
     updateBehavior="UPDATE_IN_DATABASE",
-    partitionKeys= ["reading_type", "year", "month", "day", "hour"],
+    partitionKeys=["reading_type", "year", "month", "day", "hour"],
     compression="snappy",
     enableUpdateCatalog=True,
     transformation_ctx="write_sink",
-    options = {
+    options={
         "groupFiles": "inPartition",
-        "groupSize": "104857600" # 104857600 bytes (100 MB)
+        "groupSize": "104857600"  # 104857600 bytes (100 MB)
     }
 )
 

@@ -15,6 +15,7 @@ Metadata:
           - StagingGlueWorkflow
           - StagingTableName
           - StagingDatabaseName
+          - IntegrateMeterReadingsGlueJob
     ParameterLabels:
       StagingDataBucket:
         default: Staging data bucket
@@ -28,6 +29,8 @@ Metadata:
         default: Staging Database Name
       StagingTableName:
         default: Staging Table Name
+      IntegrateMeterReadingsGlueJob:
+        default: Glue Job to integrate staging data
 
 Parameters:
   StagingDataBucket:
@@ -48,6 +51,9 @@ Parameters:
   StagingDatabaseName:
     Type: String
     Description: "Glue Database Staging Name"
+  IntegrateMeterReadingsGlueJob:
+    Type: String
+    Description: "Glue Job to integrate staging data"
 
 Resources:
 
@@ -56,18 +62,24 @@ Resources:
     Properties:
       Definition:
         Comment: Delayed start of a glue workflow
-        StartAt: Wait
+        StartAt: Glue Job First Run
         States:
+          Glue Job First Run:
+            Type: Task
+            Resource: arn:aws:states:::glue:startJobRun.sync
+            Parameters:
+              JobName: !Ref IntegrateMeterReadingsGlueJob
+            Next: Wait
           Wait:
             Type: Wait
             Seconds: 30
-            Next: StartWorkflowRun
-          StartWorkflowRun:
+            Next: Glue Job Second Run
+          Glue Job Second Run:
             Type: Task
-            End: true
+            Resource: arn:aws:states:::glue:startJobRun.sync
             Parameters:
-              Name: !Ref StagingGlueWorkflow
-            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startWorkflowRun"
+              JobName: !Ref IntegrateMeterReadingsGlueJob
+            End: true
       Role: !GetAtt StepFunctionQueueStatusRole.Arn
 
   #
@@ -128,20 +140,20 @@ Resources:
       Description: "Inbound Historic Glue Workflow Trigger"
       EventPattern:
         source:
-          - "aws.s3"
+          - aws.s3
         detail-type:
-          - "Object Created"
+          - Object Created
         detail:
           bucket:
             name:
               - !Ref InboundDataBucket
           object:
             key:
-              - prefix: "data/historic/"
-      State: "ENABLED"
+              - prefix: data/historic/
+      State: ENABLED
       Targets:
         - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${InboundReadingGlueWorkflow}"
-          Id: "inbound_glue_workflow_trigger"
+          Id: inbound_glue_workflow_trigger
           RoleArn: !GetAtt EventBridgeRole.Arn
 
 
@@ -162,7 +174,7 @@ Resources:
       State: "ENABLED"
       Targets:
         - Arn: !Ref DelayedStagingWorkflowStateMachine
-          Id: "delayed_staging_workflow_sm"
+          Id: "staging_workflow_sm"
           RoleArn: !GetAtt EventBridgeRole.Arn
 
   #
@@ -189,8 +201,12 @@ Resources:
               - Effect: Allow
                 Action:
                   - glue:StartWorkflowRun
+                  - glue:StartJobRun
+                  - glue:GetJobRun
+                  - glue:GetJobRuns
+                  - glue:BatchStopJobRun
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${IntegrateMeterReadingsGlueJob}"
 
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
@@ -212,7 +228,12 @@ Resources:
                 Action:
                   - "states:StartExecution"
                 Resource: !Ref DelayedStagingWorkflowStateMachine
-
+              - Effect: Allow
+                Action:
+                  - "glue:notifyEvent"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${InboundReadingGlueWorkflow}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
 
   GlueJobRole:
     Type: AWS::IAM::Role
