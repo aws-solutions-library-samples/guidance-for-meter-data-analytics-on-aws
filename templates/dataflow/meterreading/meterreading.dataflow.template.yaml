@@ -172,6 +172,7 @@ Resources:
         StagingGlueWorkflow: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.StagingGlueWorkflow
         StagingDatabaseName: !Ref GlueStagingDatabase
         StagingTableName: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.GlueTableStagingName
+        IntegrateMeterReadingsGlueJob: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.IntegrateMeterReadingsGlueJob
 
   MeterringDataflowDemoUtilityStack:
     Type: 'AWS::CloudFormation::Stack'
@@ -187,6 +188,7 @@ Resources:
         StagingGlueWorkflow: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.StagingGlueWorkflow
         InboundQueueName: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundFileRangeQueueName
         InboundDataBucket: !GetAtt MeterringDataflowInputAdapterStack.Outputs.InboundDataBucket
+        IntegrateMeterReadingsGlueJob: !GetAtt IntegrationMeterReadingDataflowStack.Outputs.IntegrateMeterReadingsGlueJob
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion

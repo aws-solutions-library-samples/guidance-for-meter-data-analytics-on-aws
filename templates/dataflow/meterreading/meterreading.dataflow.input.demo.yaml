@@ -15,6 +15,7 @@ Metadata:
           - StagingGlueWorkflow
           - InboundQueueName
           - InboundDataBucket
+          - IntegrateMeterReadingsGlueJob
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -28,6 +29,8 @@ Metadata:
         default: Staging Glue workflow
       InboundQueueName:
         default: Inbound Queue Name
+      IntegrateMeterReadingsGlueJob:
+        default: Glue job name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -45,6 +48,9 @@ Parameters:
   StagingGlueWorkflow:
     Type: String
     Description: Staging Glue workflow
+  IntegrateMeterReadingsGlueJob:
+    Type: String
+    Description: Glue Job name
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
     ConstraintDescription: >-
@@ -200,6 +206,11 @@ Resources:
                   - "sqs:GetQueueUrl"
                 Resource:
                   - !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${InboundQueueName}"
+              - Effect: Allow
+                Action:
+                  - glue:GetJobRuns
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${IntegrateMeterReadingsGlueJob}"
 
   StepFunctionQueueStatusRole:
     Type: 'AWS::IAM::Role'
