@@ -15,6 +15,7 @@ Metadata:
           - StagingGlueWorkflow
           - StagingTableName
           - StagingDatabaseName
+          - IntegrateMeterReadingsGlueJob
     ParameterLabels:
       StagingDataBucket:
         default: Staging data bucket
@@ -28,6 +29,8 @@ Metadata:
         default: Staging Database Name
       StagingTableName:
         default: Staging Table Name
+      IntegrateMeterReadingsGlueJob:
+        default: Glue Job to integrate staging data
 
 Parameters:
   StagingDataBucket:
@@ -48,27 +51,36 @@ Parameters:
   StagingDatabaseName:
     Type: String
     Description: "Glue Database Staging Name"
+  IntegrateMeterReadingsGlueJob:
+    Type: String
+    Description: "Glue Job to integrate staging data"
 
 Resources:
 
-#  DelayedStagingWorkflowStateMachine:
-#    Type: AWS::Serverless::StateMachine
-#    Properties:
-#      Definition:
-#        Comment: Delayed start of a glue workflow
-#        StartAt: Wait
-#        States:
-#          Wait:
-#            Type: Wait
-#            Seconds: 30
-#            Next: StartWorkflowRun
-#          StartWorkflowRun:
-#            Type: Task
-#            End: true
-#            Parameters:
-#              Name: !Ref StagingGlueWorkflow
-#            Resource: !Sub "arn:${AWS::Partition}:states:::aws-sdk:glue:startWorkflowRun"
-#      Role: !GetAtt StepFunctionQueueStatusRole.Arn
+  DelayedStagingWorkflowStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        Comment: Delayed start of a glue workflow
+        StartAt: Glue Job First Run
+        States:
+          Glue Job First Run:
+            Type: Task
+            Resource: arn:aws:states:::glue:startJobRun.sync
+            Parameters:
+              JobName: !Ref IntegrateMeterReadingsGlueJob
+            Next: Wait
+          Wait:
+            Type: Wait
+            Seconds: 30
+            Next: Glue Job Second Run
+          Glue Job Second Run:
+            Type: Task
+            Resource: arn:aws:states:::glue:startJobRun.sync
+            Parameters:
+              JobName: !Ref IntegrateMeterReadingsGlueJob
+            End: true
+      Role: !GetAtt StepFunctionQueueStatusRole.Arn
 
   #
   # Glue Jobs
@@ -144,6 +156,7 @@ Resources:
           Id: inbound_glue_workflow_trigger
           RoleArn: !GetAtt EventBridgeRole.Arn
 
+
   GlueStagingToIntegratedTriggerEventRule:
     Type: AWS::Events::Rule
     Properties:
@@ -160,8 +173,8 @@ Resources:
             - "SUCCEEDED"
       State: "ENABLED"
       Targets:
-        - Arn: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
-          Id: "intyegrate_glue_workflow_trigger"
+        - Arn: !Ref DelayedStagingWorkflowStateMachine
+          Id: "staging_workflow_sm"
           RoleArn: !GetAtt EventBridgeRole.Arn
 
   #
@@ -188,8 +201,12 @@ Resources:
               - Effect: Allow
                 Action:
                   - glue:StartWorkflowRun
+                  - glue:StartJobRun
+                  - glue:GetJobRun
+                  - glue:GetJobRuns
+                  - glue:BatchStopJobRun
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:workflow/${StagingGlueWorkflow}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${IntegrateMeterReadingsGlueJob}"
 
   EventBridgeRole:
     Type: 'AWS::IAM::Role'
@@ -207,10 +224,10 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-#              - Effect: Allow
-#                Action:
-#                  - "states:StartExecution"
-#                Resource: !Ref DelayedStagingWorkflowStateMachine
+              - Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref DelayedStagingWorkflowStateMachine
               - Effect: Allow
                 Action:
                   - "glue:notifyEvent"

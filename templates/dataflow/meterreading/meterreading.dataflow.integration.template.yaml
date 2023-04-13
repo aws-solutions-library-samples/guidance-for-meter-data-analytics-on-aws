@@ -47,6 +47,8 @@ Outputs:
     Value: !Ref MeterReadingIntegrationGlueWorkflow
   GlueTableStagingName:
     Value: !Ref GlueTableStaging
+  IntegrateMeterReadingsGlueJob:
+    Value: !Ref IntegrateMeterReadingsGlueJob
 
 Resources:
   #
@@ -70,7 +72,6 @@ Resources:
         --job-language: "python"
         --enable-auto-scaling: "true"
         --enable-s3-parquet-optimized-committer: true
-        --MDA_STAGING_BUCKET: !Ref StagingDataBucket
         --MDA_DATABASE_STAGING: !Ref GlueStagingDatabase
         --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
         --STAGING_TABLE_NAME: "meter_readings_staging_json"
