@@ -14,14 +14,22 @@
 # HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+import os
 
-import os, boto3
+import boto3
 
 sqs_client = boto3.client('sqs')
+glue_client = boto3.client('glue')
 
 
 def lambda_handler(event, context):
-    queue_name = os.environ["QUEUE_NAME"]
+    jobs = glue_client.get_job_runs(JobName='integrate-meterreadings')
+
+    if any(job["JobRunState"] == "RUNNING" for job in jobs["JobRuns"]):
+        print("Running Glue Job detected, return false")
+        return {"queue_empty": False}
+
+    queue_name = os.getenv("QUEUE_NAME")
     queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
 
     response = sqs_client.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages',
@@ -29,8 +37,6 @@ def lambda_handler(event, context):
                                                                                    'ApproximateNumberOfMessagesDelayed'])
 
     queue_attr = response["Attributes"]
-
-    print(queue_attr)
 
     num_of_messages = int(queue_attr["ApproximateNumberOfMessages"])
     num_of_messages_not_visible = int(queue_attr["ApproximateNumberOfMessagesNotVisible"])
