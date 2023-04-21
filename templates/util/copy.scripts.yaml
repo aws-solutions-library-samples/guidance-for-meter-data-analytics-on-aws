@@ -26,6 +26,10 @@ Resources:
           - weatherdata-integration-job.py
           - meterreadings-late-reads-cleanup-job.py
           - meterreadings-inbound-historic-job.py
+          - mlpipeline-anomaly-detection-job.py
+          - mlpipeline-prepare-training-job.py
+          - mlpipeline-prepare-inference-job.py
+          - mlpipeline-store-results-job.py
 
     CopyArtifactsRole:
       Type: AWS::IAM::Role
