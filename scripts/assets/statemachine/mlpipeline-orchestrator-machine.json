@@ -1,0 +1,179 @@
+{
+    "Comment": "This is the overall ML pipeline orchestrator",
+    "StartAt": "CheckStepsToTake",
+    "States": {
+      "CheckStepsToTake": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "Payload.$": "$",
+          "FunctionName": "${PipelineStepsFunction}"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException"
+            ],
+            "IntervalSeconds": 2,
+            "MaxAttempts": 6,
+            "BackoffRate": 2
+          }
+        ],
+        "Next": "GetPipelineParameters",
+        "Comment": "decide if anomaly detection, training, inference should be executed"
+      },
+      "GetPipelineParameters": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "FunctionName": "${PipelineParametersFunction}",
+          "Payload.$": "$"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 2,
+            "MaxAttempts": 6,
+            "BackoffRate": 2
+          }
+        ],
+        "Next": "Anomalies?"
+      },
+      "Anomalies?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.anomaly",
+            "BooleanEquals": true,
+            "Next": "AnomalyJobStart"
+          }
+        ],
+        "Default": "Training?"
+      },
+      "Training?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.training",
+            "BooleanEquals": true,
+            "Next": "RunModelTrainingStateMachine"
+          }
+        ],
+        "Default": "Inference?"
+      },
+      "AnomalyJobStart": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
+        "Parameters": {
+          "JobName": "${GlueAnomalyJobName}",
+          "Arguments": {
+            "--ANOMALY_S3_BUCKET.$": "$.Target_S3_bucket",
+            "--TIMESTAMP.$": "$.Timestamp",
+            "--USE_WEATHER.$": "$.Use_weather"
+          }
+        },
+        "Next": "Training?",
+        "ResultPath": null
+      },
+      "PrepForInference": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
+        "Parameters": {
+          "JobName": "${GluePrepareInferenceJob}",
+          "Arguments": {
+            "--TARGET_S3_URI.$": "$.BatchTransform_input_s3_uri",
+            "--UTIL_S3_URI.$": "$.BatchTransform_util_s3_uri",
+            "--TRAINING_TIME_FRAME.$": "$.Training_time_frame",
+            "--USE_WEATHER.$": "$.Use_weather"
+          }
+        },
+        "Next": "Inference (BatchTransform)",
+        "ResultPath": null
+      },
+      "Inference (BatchTransform)": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::sagemaker:createTransformJob.sync",
+        "Parameters": {
+          "ModelName.$": "$.ModelName",
+          "BatchStrategy": "SingleRecord",
+          "Environment": {
+            "DEEPAR_INFERENCE_CONFIG": "{ \"num_samples\": 50, \"output_types\": [\"mean\", \"quantiles\"], \"quantiles\": [\"0.1\", \"0.5\", \"0.9\"] }"
+          },
+          "TransformInput": {
+            "CompressionType": "None",
+            "ContentType": "application/jsonlines",
+            "SplitType": "Line",
+            "DataSource": {
+              "S3DataSource": {
+                "S3DataType": "S3Prefix",
+                "S3Uri.$": "$.BatchTransform_input_s3_uri"
+              }
+            }
+          },
+          "TransformOutput": {
+            "S3OutputPath.$": "$.BatchTransform_output_s3_uri",
+            "AssembleWith": "Line"
+          },
+          "TransformResources": {
+            "InstanceCount": 1,
+            "InstanceType.$": "$.Transform_instance_type"
+          },
+          "TransformJobName.$": "$.BatchTransform_job_name"
+        },
+        "Next": "Store results",
+        "ResultPath": null
+      },
+      "Store results": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
+        "Parameters": {
+          "JobName": "${GlueStoreResultsJob}",
+          "Arguments": {
+            "--INFERENCE_OUTPUT_S3_URI.$": "$.BatchTransform_output_s3_uri",
+            "--UTIL_S3_URI.$": "$.BatchTransform_util_s3_uri",
+            "--TRAINING_TIME_FRAME.$": "$.Training_time_frame",
+            "--TIMESTAMP.$": "$.Timestamp",
+            "--MODEL_NAME.$": "$.ModelName",
+            "--USE_WEATHER.$": "$.Use_weather"
+          }
+        },
+        "End": true
+      },
+      "RunModelTrainingStateMachine": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::states:startExecution.sync:2",
+        "Parameters": {
+          "StateMachineArn": "${ModelTrainingStateMachineArn}",
+          "Input": {
+            "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+          }
+        },
+        "Next": "Inference?",
+        "ResultPath": null
+      },
+      "Inference?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.inference",
+            "BooleanEquals": true,
+            "Next": "PrepForInference"
+          }
+        ],
+        "Default": "Complete"
+      },
+      "Complete": {
+        "Type": "Pass",
+        "End": true
+      }
+    }
+  }

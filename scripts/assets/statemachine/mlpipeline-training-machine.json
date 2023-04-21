@@ -6,32 +6,29 @@
         "Type": "Task",
         "Resource": "arn:aws:states:::lambda:invoke",
         "Parameters": {
-          "FunctionName": "${LoadPipelineParameter}",
+          "FunctionName": "${PipelineParametersFunction}",
           "Payload": {
-            "train_model" : true
+            "train_model": true
           }
         },
         "OutputPath": "$.Payload",
         "Next": "PrepareTrainingDataset"
       },
       "PrepareTrainingDataset": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
         "Parameters": {
-          "FunctionName": "${LambdaPrepareTrainingNameV2}",
-          "Payload": {
-            "Training_samples.$": "$.Training_samples",
-            "Data_start.$": "$.Data_start",
-            "Data_end.$": "$.Data_end",
-            "Forecast_period.$": "$.Forecast_period",
-            "ModelName.$": "$.ModelName",
-            "Endpoint_instance_type.$": "$.Endpoint_instance_type",
-            "Training_instance_type.$": "$.Training_instance_type",
-            "ML_endpoint_name.$": "$.ML_endpoint_name"
+          "JobName": "${GluePrepareTrainingJobName}",
+          "Arguments": {
+            "--TARGET_S3_PATH.$": "$.Target_S3_path",
+            "--TARGET_S3_BUCKET.$": "$.Target_S3_bucket",
+            "--TRAINING_TIME_FRAME.$": "$.Training_time_frame",
+            "--FORECAST_PERIOD.$": "$.Forecast_period",
+            "--USE_WEATHER.$": "$.Use_weather"
           }
         },
-        "ResultPath": null,
-        "Resource": "arn:aws:states:::lambda:invoke",
-        "Type": "Task",
-        "Next": "ModelTraining"
+        "Next": "ModelTraining",
+        "ResultPath": null
       },
       "ModelTraining": {
         "ResultPath": "$.TrainingOutput",
@@ -42,7 +39,7 @@
             "TrainingInputMode": "File"
           },
           "OutputDataConfig": {
-            "S3OutputPath": "s3://${WorkingBucket}/meteranalytics/model"
+            "S3OutputPath": "s3://${MLResourcesBucket}/sagemakerassets/model"
           },
           "StoppingCondition": {
             "MaxRuntimeInSeconds": 86400
@@ -50,7 +47,7 @@
           "ResourceConfig": {
             "InstanceCount": 1,
             "InstanceType.$": "$.Training_instance_type",
-            "VolumeSizeInGB": 30
+            "VolumeSizeInGB": 40
           },
           "RoleArn": "${SageMakerRole}",
           "InputDataConfig": [
@@ -58,7 +55,7 @@
               "DataSource": {
                 "S3DataSource": {
                   "S3DataType": "S3Prefix",
-                  "S3Uri": "s3://${WorkingBucket}/meteranalytics/train/",
+                  "S3Uri.$": "$.Train_S3_uri",
                   "S3DataDistributionType": "FullyReplicated"
                 }
               },
@@ -68,7 +65,7 @@
               "DataSource": {
                 "S3DataSource": {
                   "S3DataType": "S3Prefix",
-                  "S3Uri": "s3://${WorkingBucket}/meteranalytics/test/",
+                  "S3Uri.$": "$.Test_S3_uri",
                   "S3DataDistributionType": "FullyReplicated"
                 }
               },
@@ -81,8 +78,8 @@
             "early_stopping_patience": "40",
             "mini_batch_size": "48",
             "learning_rate": "5E-4",
-            "context_length": "168",
-            "prediction_length": "168"
+            "context_length.$": "$.Prediction_length",
+            "prediction_length.$": "$.Prediction_length"
           },
           "TrainingJobName.$": "$.Training_job_name"
         },
@@ -92,7 +89,7 @@
       "SaveModel": {
         "ResultPath": null,
         "Parameters": {
-          "ExecutionRoleArn": "${SageMakerRole}",
+          "ExecutionRoleArn":  "${SageMakerRole}",
           "ModelName.$": "$.ModelName",
           "PrimaryContainer": {
             "Environment": {},
@@ -125,7 +122,7 @@
         "Type": "Task",
         "Resource": "arn:aws:states:::lambda:invoke",
         "Parameters": {
-          "FunctionName": "${HasEndpoint}",
+          "FunctionName": "${HasEndpointFunction}",
           "Payload": {
             "endpoint_name.$": "$.ML_endpoint_name"
           }
