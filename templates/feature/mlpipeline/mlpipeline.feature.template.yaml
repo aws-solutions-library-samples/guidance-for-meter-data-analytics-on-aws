@@ -1,0 +1,739 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deployment of ML Pipeline for anomaly detection and forecasting. (qs-1r18anahd)"
+
+Mappings:
+  TrainingImageMap:
+    us-west-1:
+      image: "632365934929.dkr.ecr.us-west-1.amazonaws.com"
+    us-west-2:
+      image: "156387875391.dkr.ecr.us-west-2.amazonaws.com"
+    us-east-1:
+      image: "522234722520.dkr.ecr.us-east-1.amazonaws.com"
+    us-east-2:
+      image: "566113047672.dkr.ecr.us-east-2.amazonaws.com"
+    ap-east-1:
+      image: "286214385809.dkr.ecr.ap-east-1.amazonaws.com"
+    ap-northeast-1:
+      image: "633353088612.dkr.ecr.ap-northeast-1.amazonaws.com"
+    ap-northeast-2:
+      image: "204372634319.dkr.ecr.ap-northeast-2.amazonaws.com"
+    ap-south-1:
+      image: "991648021394.dkr.ecr.ap-south-1.amazonaws.com"
+    ap-southeast-1:
+      image: "475088953585.dkr.ecr.ap-southeast-1.amazonaws.com"
+    ap-southeast-2:
+      image: "514117268639.dkr.ecr.ap-southeast-2.amazonaws.com"
+    ca-central-1:
+      image: "469771592824.dkr.ecr.ca-central-1.amazonaws.com"
+    cn-north-1:
+      image: "390948362332.dkr.ecr.cn-north-1.amazonaws.com.cn"
+    cn-northwest-1:
+      image: "387376663083.dkr.ecr.cn-northwest-1.amazonaws.com.cn"
+    eu-north-1:
+      image: "669576153137.dkr.ecr.eu-north-1.amazonaws.com"
+    eu-central-1:
+      image: "495149712605.dkr.ecr.eu-central-1.amazonaws.com"
+    eu-west-1:
+      image: "224300973850.dkr.ecr.eu-west-1.amazonaws.com"
+    eu-west-2:
+      image: "644912444149.dkr.ecr.eu-west-2.amazonaws.com"
+    eu-west-3:
+      image: "749696950732.dkr.ecr.eu-west-3.amazonaws.com"
+    me-south-1:
+      image: "249704162688.dkr.ecr.me-south-1.amazonaws.com"
+    sa-east-1:
+      image: "855470959533.dkr.ecr.sa-east-1.amazonaws.com"
+    us-gov-west-1:
+      image: "226302683700.dkr.ecr.us-gov-west-1.amazonaws.com"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Meter readings dataflow configuration'
+        Parameters:
+          - StagingDataBucket
+          - IntegratedDataBucket
+          - GlueStagingDatabase
+          - GlueIntegratedDatabase
+          - MdaGlueScriptBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+    ParameterLabels:
+      StagingDataBucket:
+        default: Staging S3 Bucket
+      IntegratedDataBucket:
+        default: Integration S3 Bucket
+      GlueStagingDatabase:
+        default: Glue staging database
+      GlueIntegratedDatabase:
+        default: Glue integration database
+      MdaGlueScriptBucket:
+        default: Glue script bucket
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket Region
+
+
+Parameters:
+  StagingDataBucket:
+    Type: String
+    Description: 'S3 bucket to store staging data.'
+  IntegratedDataBucket:
+    Type: String
+    Description: 'S3 bucket to store integration data.'
+  GlueStagingDatabase:
+    Type: String
+    Description: 'Glue staging database.'
+  GlueIntegratedDatabase:
+    Type: String
+    Description: 'Glue integration database.'
+  MdaGlueScriptBucket:
+    Type: String
+    Description: 'Glue script bucket.'
+
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'AWS Region where the Quick Start S3 bucket (QSS3BucketName) is 
+      hosted. Keep the default Region unless you are customizing the template. 
+      Changing this Region updates code references to point to a new Quick Start location. 
+      When using your own bucket, specify the Region. 
+      See https://aws-quickstart.github.io/option1.html.'
+    Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Resources:
+  MlResourcesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+  
+  GlueMlFeatureDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub "mda_database_feature_ml" #Todo include ${GlueDatabaseName}
+
+  PipelineStepsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Determines the steps the ML Pipeline will take.
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_steps/lambda.zip'
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt MLLambdaHelpersIAMRole.Arn
+      Environment:
+        Variables:
+          STACK_NAME: !Sub ${AWS::StackName}
+  MLLambdaHelpersIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                    - ssm:PutParameter
+                    - ssm:GetParameterHistory
+                    - ssm:GetParametersByPath
+                    - ssm:GetParameters
+                    - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:*:${AWS::AccountId}:parameter/mlpipeline/*'
+              - Effect: Allow
+                Action:
+                  - sagemaker:ListEndpoints
+                Resource:
+                  - '*'
+
+
+  PipelineParametersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Gets the parameter values for the ML Pipeline.
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_parameters/lambda.zip'
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt MLLambdaHelpersIAMRole.Arn
+      Environment:
+        Variables:
+          STACK_NAME: !Sub ${AWS::StackName}
+          S3_BUCKET_NAME: !Sub ${MlResourcesBucket}
+
+
+  HasEndpointFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Timeout: 30
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_has_endpoint/lambda.zip'
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Role: !GetAtt MLLambdaHelpersIAMRole.Arn
+  
+  AnomalyDetectionGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: anomaly-detection
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/mlpipeline-anomaly-detection-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-auto-scaling: "true"
+        --ANOMALY_S3_BUCKET: !Sub ${MlResourcesBucket}
+        --ANOMALY_S3_INFO_PATH: "anomaly-detection/anomalies_date_tracker"
+        --ANOMALY_S3_PATH: "anomaly-detection/results"
+        --SOURCE_S3_BUCKET: !Ref IntegratedDataBucket # TODO
+        --SOURCE_S3_PATH: "readings/parquet/reading_type=kw" # TODO
+        --MDA_DATABASE_ML: !Ref GlueMlFeatureDatabase
+        --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
+        --SOURCE_TABLE_NAME: "meter_readings_integrated_parquet"
+        --ANOMALY_RESULTS_TABLE_NAME: "meter_anomaly_results"
+        --STACK_NAME: !Sub ${AWS::StackName}
+        --additional-python-modules: "pandas,prophet"
+      MaxRetries: 0
+      NumberOfWorkers: 20
+      WorkerType: G.2X
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: "3.0"
+
+  PrepareTrainingGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: prepare-training
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/mlpipeline-prepare-training-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-auto-scaling: "true"
+        --SOURCE_S3_BUCKET: !Ref IntegratedDataBucket #"meter-data-analytics-datasto-integrateddatabucket-171t1y75fisgl" # TODO
+        --SOURCE_S3_PATH: "readings/parquet/reading_type=kw" # TODO
+        --MDA_DATABASE_ML: !Ref GlueMlFeatureDatabase
+        --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
+        --SOURCE_TABLE_NAME: "meter_readings_integrated_parquet"
+        --STACK_NAME: !Sub ${AWS::StackName}
+      MaxRetries: 0
+      NumberOfWorkers: 20
+      WorkerType: G.1X
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: "3.0"
+
+  PrepareInferenceGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: prepare-inference
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/mlpipeline-prepare-inference-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-auto-scaling: "true"
+        --SOURCE_S3_BUCKET: !Ref IntegratedDataBucket
+        --SOURCE_S3_PATH: "readings/parquet/reading_type=kw" # TODO
+        --MDA_DATABASE_ML: !Ref GlueMlFeatureDatabase
+        --MDA_DATABASE_INTEGRATED: !Ref GlueIntegratedDatabase
+        --SOURCE_TABLE_NAME: "meter_readings_integrated_parquet"
+      MaxRetries: 0
+      NumberOfWorkers: 20
+      WorkerType: G.1X
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: "3.0"
+
+  StoreResultsGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: store-results
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub s3://${MdaGlueScriptBucket}/scripts/mlpipeline-store-results-job.py
+        PythonVersion: "3"
+      DefaultArguments:
+        --TempDir: !Sub "s3://${MdaGlueScriptBucket}/temp/"
+        --enable-metrics: "true"
+        --enable-continuous-cloudwatch-log: "true"
+        --enable-continuous-log-filter: "true"
+        --job-bookmark-option: "job-bookmark-enable"
+        --job-language: "python"
+        --enable-auto-scaling: "true"
+        --TARGET_S3_BUCKET: !Sub ${MlResourcesBucket}
+        --TARGET_S3_PATH: "inference/results"
+        --MDA_DATABASE_ML: !Ref GlueMlFeatureDatabase
+        --INFERENCE_RESULTS_TABLE_NAME: "meter_forecast_results"
+      MaxRetries: 0
+      NumberOfWorkers: 20
+      WorkerType: G.1X
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: "3.0"
+
+
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+  MLS3MeterBucketAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-glue-meterreading-bucket-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:PutParameter
+              - ssm:GetParameterHistory
+              - ssm:GetParametersByPath
+              - ssm:GetParameters
+              - ssm:GetParameter
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:ssm:*:${AWS::AccountId}:parameter/mlpipeline/*'
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${StagingDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MdaGlueScriptBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${MlResourcesBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${MlResourcesBucket}/*"
+          - Effect: Allow
+            Action:
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:CreateTable'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+              - 'glue:BatchCreatePartition'
+              - 'glue:BatchGetPartition'
+              - 'glue:BatchUpdatePartition'
+            Resource:
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueStagingDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueMlFeatureDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueStagingDatabase}/meter_readings_staging_json"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_integrated_parquet"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueMlFeatureDatabase}/*"
+      Roles:
+        - !Ref GlueJobRole
+
+
+
+  MLPipelineModelTrainingStateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      RoleArn: !GetAtt MLTrainingStateMachineRole.Arn
+      DefinitionS3Location:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/mlpipeline-training-machine.json'
+      DefinitionSubstitutions:
+        MLResourcesBucket: !Ref MlResourcesBucket
+        GluePrepareTrainingJobName: !Ref PrepareTrainingGlueJob
+        AccountId: !Sub ${AWS::AccountId}
+        SageMakerRole: !GetAtt SageMakerRole.Arn
+        TrainingImage: !FindInMap [ TrainingImageMap, !Ref "AWS::Region", "image" ]
+        PipelineParametersFunction: !Ref PipelineParametersFunction
+        HasEndpointFunction: !Ref HasEndpointFunction
+
+  MLPipelineOrchestratorStateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      RoleArn: !GetAtt MLOrchestratorStateMachineRole.Arn
+      DefinitionS3Location:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/mlpipeline-orchestrator-machine.json'
+      DefinitionSubstitutions:
+        MLResourcesBucket: !Ref MlResourcesBucket
+        GlueAnomalyJobName: !Ref AnomalyDetectionGlueJob
+        GluePrepareInferenceJob: !Ref PrepareInferenceGlueJob
+        GlueStoreResultsJob: !Ref StoreResultsGlueJob
+        ModelTrainingStateMachineArn: !GetAtt MLPipelineModelTrainingStateMachine.Arn
+        AccountId: !Sub ${AWS::AccountId}
+        SageMakerRole: !GetAtt SageMakerRole.Arn
+        TrainingImage: !FindInMap [ TrainingImageMap, !Ref "AWS::Region", "image" ]
+        PipelineParametersFunction: !Ref PipelineParametersFunction
+        PipelineStepsFunction: !Ref PipelineStepsFunction
+
+
+  MLOrchestratorStateMachineRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - states.amazonaws.com
+  MLOrchestratorStateMachinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref MLOrchestratorStateMachineRole
+      PolicyName: !Sub '${AWS::Region}-${MLOrchestratorStateMachineRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: iam:PassRole
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*"
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              - !GetAtt PipelineStepsFunction.Arn
+              - !GetAtt PipelineParametersFunction.Arn
+              - !GetAtt HasEndpointFunction.Arn
+              - !Sub '${PipelineStepsFunction.Arn}:*'
+              - !Sub '${PipelineParametersFunction.Arn}:*'
+              - !Sub '${HasEndpointFunction.Arn}:*'
+          - Effect: Allow
+            Action:
+              - glue:StartJobRun
+              - glue:GetJobRun
+              - glue:GetJobRuns
+              - glue:BatchStopJobRun
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - events:DescribeRule
+              - events:PutRule
+              - events:PutTargets
+            Resource:
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule"
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForSageMakerTransformJobsRule"
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule"
+          - Effect: Allow
+            Action: states:StartExecution
+            Resource: !GetAtt MLPipelineModelTrainingStateMachine.Arn
+          - Effect: Allow
+            Action:
+              - sagemaker:CreateTrainingJob
+              - sagemaker:DescribeTrainingJob
+              - sagemaker:StopTrainingJob
+              - sagemaker:CreateHyperParameterTuningJob
+              - sagemaker:DescribeHyperParameterTuningJob
+              - sagemaker:StopHyperParameterTuningJob
+              - sagemaker:CreateModel
+              - sagemaker:CreateEndpointConfig
+              - sagemaker:CreateEndpoint
+              - sagemaker:DeleteEndpointConfig
+              - sagemaker:DeleteEndpoint
+              - sagemaker:UpdateEndpoint
+              - sagemaker:ListTags
+              - sagemaker:AddTags
+              - sagemaker:CreateTransformJob
+            Resource:
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:transform-job/*"
+
+  MLTrainingStateMachineRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - states.amazonaws.com
+  MLTrainingStateMachinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref  MLTrainingStateMachineRole
+      PolicyName: !Sub '${AWS::Region}-${ MLTrainingStateMachineRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: iam:PassRole
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*"
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              - !GetAtt PipelineStepsFunction.Arn
+              - !GetAtt PipelineParametersFunction.Arn
+              - !GetAtt HasEndpointFunction.Arn
+              - !Sub '${PipelineStepsFunction.Arn}:*'
+              - !Sub '${PipelineParametersFunction.Arn}:*'
+              - !Sub '${HasEndpointFunction.Arn}:*'
+          - Effect: Allow
+            Action:
+              - glue:StartJobRun
+              - glue:GetJobRun
+              - glue:GetJobRuns
+              - glue:BatchStopJobRun
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - events:DescribeRule
+              - events:PutRule
+              - events:PutTargets
+            Resource:
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule"
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForSageMakerTransformJobsRule"
+              - !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule"
+          - Effect: Allow
+            Action:
+              - sagemaker:CreateTrainingJob
+              - sagemaker:DescribeTrainingJob
+              - sagemaker:StopTrainingJob
+              - sagemaker:CreateHyperParameterTuningJob
+              - sagemaker:DescribeHyperParameterTuningJob
+              - sagemaker:StopHyperParameterTuningJob
+              - sagemaker:CreateModel
+              - sagemaker:CreateEndpointConfig
+              - sagemaker:CreateEndpoint
+              - sagemaker:DeleteEndpointConfig
+              - sagemaker:DeleteEndpoint
+              - sagemaker:UpdateEndpoint
+              - sagemaker:ListTags
+              - sagemaker:AddTags
+            Resource:
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*"
+              - !Sub "arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*"
+
+
+  SageMakerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'sagemaker.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::${AWS::Partition}:policy/AmazonS3FullAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::${AWS::Partition}:policy/AmazonAthenaFullAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::${AWS::Partition}:policy/AmazonSageMakerFullAccess'
+
+  MLPipelineAnomaly:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Should anomalies be generated? Values are TRUE and FALSE
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Steps/Anomaly"
+      Type: String
+      Value: "FALSE"
+  MLPipelineTraining:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Should forecasting model be trained? Values are TRUE and FALSE
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Steps/Training"
+      Type: String
+      Value: "FALSE"
+  MLPipelineInference:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Should batch inference be run on forecasting model? Values are TRUE and FALSE
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Steps/Inference"
+      Type: String
+      Value: "FALSE"
+
+  MLPipelineUseWeather:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Should weather data be used for anomaly detection and forecasting? Values are TRUE and FALSE
+      Name: !Sub "/mlpipeline/${AWS::StackName}/ML/UseWeather"
+      Type: String
+      Value: "FALSE"
+
+  ForecastPeriod:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Forecast period in days
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/ForecastPeriod"
+      Type: String
+      Value: "7"
+  TrainingTimeFrame:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Timeframe used for training in days
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/TrainingTimeFrame"
+      Type: String
+      Value: "395"
+  TrainingInstanceType:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Instance type used for training
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/TrainingInstanceType"
+      Type: String
+      Value: "ml.c5.4xlarge"
+  EndpointInstanceType:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Instance type used for inference endpoint
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/EndpointInstanceType"
+      Type: String
+      Value: "ml.m5.xlarge"
+  MlEndpointName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Name of inference endpoint
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/EndpointName"
+      Type: String
+      Value: "ml-endpoint-mda"
+  TransformInstanceType:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Instance type used for batch transform
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/TransformInstanceType"
+      Type: String
+      Value: "ml.m4.4xlarge"
+  ModelName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Name of SageMaker Model
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/ModelName"
+      Type: String
+      Value: "model-current-datetime"
+  TrainingJobName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Name of SageMaker Training Job
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/TrainingJobName"
+      Type: String
+      Value: "training-job-current-datetime"
+  TrainingVolumeSize:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Volume size in GB for SageMaker Training Job
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Forecast/TrainingVolumeSize"
+      Type: String
+      Value: "40"
+  LastDatetime:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Most recent datetime of anomaly detection
+      Name: !Sub "/mlpipeline/${AWS::StackName}/Anomaly/LastDatetime"
+      Type: String
+      Value: "None"
