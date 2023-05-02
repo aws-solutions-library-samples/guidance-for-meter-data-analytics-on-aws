@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys the grid topology data dataflow. (qs-1r18anahd)"
+Description: "Deploys the grid topology data dataflow. (SO9213)"
 
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]

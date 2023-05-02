@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "This Stack is only deployed in DEMO mode. It creates some utility resources to provide a better user experience. (qs-1r18anahd)"
+Description: "This Stack is only deployed in DEMO mode. It creates some utility resources to provide a better user experience. (SO9213)"
 
 Metadata:
   cfn-lint:

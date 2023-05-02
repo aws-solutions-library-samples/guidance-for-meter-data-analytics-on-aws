@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: 'AWS::Serverless-2016-10-31'
 Description: >-
-  Imports batch of historic data vis Glue from inbound to staging (qs-1r18anahd)
+  Imports batch of historic data vis Glue from inbound to staging (SO9213)
 
 Metadata:
   AWS::CloudFormation::Interface:

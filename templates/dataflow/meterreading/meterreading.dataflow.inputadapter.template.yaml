@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: 'AWS::Serverless-2016-10-31'
 Description: >-
-  Adapter to parse and process input meter data (qs-1r18anahd)
+  Adapter to parse and process input meter data (SO9213)
 
 Metadata:
   AWS::CloudFormation::Interface:
