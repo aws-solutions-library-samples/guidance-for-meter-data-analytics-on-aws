@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Creates glue S3 buckets and upload scripts to it. (qs-1r18anahd)"
+Description: "Creates glue S3 buckets and upload scripts to it. (SO9213)"
 Resources:
   IntegrationEventBus:
     Type: AWS::Events::EventBus
