@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Create Grafana Role for accessing Athena. (qs-1r18anahd)"
+Description: "Create Grafana Role for accessing Athena. (SO9213)"
 
 Resources:
 

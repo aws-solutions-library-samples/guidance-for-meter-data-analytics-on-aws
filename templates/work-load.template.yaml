@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Workload template to deploy the AWS Quick Start for the Utility Meter Data Analytics platform in an existing VPC. (qs-1r18anahd)"
+Description: "Workload template to deploy the AWS Quick Start for the Utility Meter Data Analytics platform in an existing VPC. (SO9213)"
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
   DeployMeterGeneratorAndHesSimulator: !Equals [ !Ref MeterDataGenerator, 'ENABLED' ]

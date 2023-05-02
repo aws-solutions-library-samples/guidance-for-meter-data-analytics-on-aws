@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: "Deploys data common storage infrastructure. (qs-1r18anahd)"
+Description: "Deploys data common storage infrastructure. (SO9213)"
 
 Resources:
   StagingDataBucket:

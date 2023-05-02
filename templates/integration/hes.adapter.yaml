@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Integration Orchestrator. (qs-1r18anahd)'
+Description: 'Integration Orchestrator. (SO9213)'
 
 Metadata:
   cfn-lint:
