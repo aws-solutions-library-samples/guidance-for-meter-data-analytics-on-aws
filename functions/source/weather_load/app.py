@@ -28,7 +28,7 @@ def lambda_handler(event, context):
 
     if "initial" in event and event["initial"] is True:
         logging.info("Running initial weather data load.")
-        start = datetime(2015, 1, 1)
+        start = datetime(2022, 1, 1)
         end = datetime.today() - timedelta(days=1)
     else:
         logging.info("Running daily weather data load.")

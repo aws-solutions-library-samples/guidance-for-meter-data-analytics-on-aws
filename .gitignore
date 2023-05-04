@@ -12,6 +12,7 @@ venv
 scripts/bin/stack-parameter*
 functions/packages/*
 cfn-lint_output.txt
+assets/lambda/*
 
 scripts/bin/start-e2e-test.sh
 /.taskcat-*

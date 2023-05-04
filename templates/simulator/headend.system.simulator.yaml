@@ -1,0 +1,878 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Headend System Simulator (SO9213)'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Timestream configuration'
+        Parameters:
+          - TimestreamCreation
+          - TimestreamDatabaseName
+          - TimestreamTableName
+      - Label:
+          default: 'Deployment configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      TimestreamCreation:
+        default: 'Use existing Timestream database and table or create new ones'
+      TimestreamDatabaseName:
+        default: 'Name of new or existing Timestream database'
+      TimestreamTableName:
+        default: 'Name of new or existing Timestream table'
+      QSS3BucketName:
+        default: 'Name of bucket where assets are hosted'
+      QSS3KeyPrefix:
+        default: 'Prefix (directory) where assets are located'
+Parameters:
+  TimestreamCreation:
+    Default: 'Create New'
+    Type: String
+    AllowedValues:
+      - 'Create New'
+      - 'Use Existing'
+  TimestreamDatabaseName:
+    Type: String
+    Default: 'devices'
+    MinLength: 3
+    MaxLength: 256
+  TimestreamTableName:
+    Type: String
+    Default: 'readings'
+    MinLength: 3
+    MaxLength: 256
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
+    ConstraintDescription: >-
+      The S3 bucket name can include numbers, lowercase letters, 
+      and hyphens (-), but it cannot start or end with a hyphen.
+    Default: aws-quickstart
+    Description: >-
+      Name of the S3 bucket for your copy of the deployment assets. Keep the default
+      name unless you are customizing the template. Changing the name updates code 
+      references to point to a new location.
+    MinLength: 3
+    MaxLength: 63
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^([0-9a-zA-Z!-_\.\*'\(\)/]+/)*$
+    ConstraintDescription: >-
+      The S3 key prefix can include numbers, lowercase letters, uppercase letters, 
+      hyphens (-), underscores (_), periods (.), asterisks (*), single quotes ('),
+      open parenthesis ((), close parenthesis ()), and forward slashes (/). End the
+      prefix with a forward slash.
+    Default: 'quickstart-aws-utility-meter-headend-system-simulator/'
+    Type: String
+Conditions:
+  createTimestream: !Equals [ !Ref TimestreamCreation, 'Create New' ]
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+Resources:
+  ReadingsFileSQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 3600
+      MessageRetentionPeriod: 28800
+  ReadingsFileSQSTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn: ReadingsFileWorkerLambdaPolicy
+    Properties:
+      BatchSize: 1
+      EventSourceArn: !GetAtt ReadingsFileSQSQueue.Arn
+      FunctionName: !GetAtt ReadingsFileWorkerLambdaFunction.Arn
+  TimestreamDatabase:
+    Condition: createTimestream
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: !Ref TimestreamDatabaseName
+  TimestreamTable:
+    Condition: createTimestream
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref TimestreamDatabase
+      TableName: !Ref TimestreamTableName
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: 168
+        MagneticStoreRetentionPeriodInDays: 30
+  DynamoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: 'request_id'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'request_id'
+          KeyType: 'HASH'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  HssSimulatorBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+  S3CopyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+  S3CopyLambdaPolicy:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E9101
+          ignore_reasons:
+            E9101: 'AbortMultipartUpload is an s3 action and can not be renamed'
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref S3CopyLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${S3CopyLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !Sub '${HssSimulatorBucket.Arn}'
+          - Effect: 'Allow'
+            Action:
+              - 's3:CopyObject'
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjects'
+              - 's3:CreateMultipartUpload'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource:
+              - !Sub '${HssSimulatorBucket.Arn}/*'
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${S3CopyLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${S3CopyLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${S3CopyLambdaFunction}:*:*'
+  S3CopyInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    DependsOn: S3CopyLambdaPolicy
+    Properties:
+      ServiceToken: !GetAtt S3CopyLambdaFunction.Arn
+      SourceBucket: !Ref QSS3BucketName
+      SourcePrefix: !Ref QSS3KeyPrefix
+      Objects: !Join
+        - ', '
+        - - 'assets/lambda/hes_cryptography_py3_9_layer/lambda.zip'
+          - 'assets/lambda/hes_awswrangler_py3_9_layer/lambda.zip'
+          - 'assets/lambda/hes_s3_copy_function/lambda.zip'
+          - 'assets/lambda/hes_create_secret_function/lambda.zip'
+          - 'assets/lambda/hes_readings_get_function/lambda.zip'
+          - 'assets/lambda/hes_readings_file_get_function/lambda.zip'
+          - 'assets/lambda/hes_readings_file_post_function/lambda.zip'
+          - 'assets/lambda/hes_readings_file_worker_function/lambda.zip'
+          - 'assets/glue/jars/amazon-timestream-jdbc-1.0.2.jar'
+          - 'assets/glue/scripts/timestream_to_s3.py'
+      DestBucket: !Ref HssSimulatorBucket
+  S3CopyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt S3CopyLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 120
+      ReservedConcurrentExecutions: 1
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        S3Key: !Sub '${QSS3KeyPrefix}assets/lambda/hes_s3_copy_function/lambda.zip'
+  S3CopyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${S3CopyLambdaFunction}'
+      RetentionInDays: 90
+  CryptographyLayer39:
+    Type: AWS::Lambda::LayerVersion
+    DependsOn: S3CopyInvoke
+    Properties:
+      LayerName: 'cryptography_py3_9'
+      Description: 'Cryptography 37.0.2 (Python 3.9)'
+      CompatibleRuntimes:
+        - 'python3.9'
+      CompatibleArchitectures:
+        - 'x86_64'
+      Content:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_cryptography_py3_9_layer/lambda.zip'
+      LicenseInfo: 'Apache 2.0'
+  CreateSecretLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  CreateSecretLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref CreateSecretLambdaRole
+      PolicyName: lambda-secret
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'secretsmanager:ListSecrets'
+              - 'secretsmanager:CreateSecret'
+              - 'secretsmanager:DeleteSecret'
+              - 'secretsmanager:DescribeSecret'
+              - 'secretsmanager:PutSecretValue'
+            Resource: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}/*'
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${CreateSecretLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${CreateSecretLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${CreateSecretLambdaFunction}:*:*'
+  CreateSecretInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    DependsOn: CreateSecretLambdaPolicy
+    Properties:
+      ServiceToken: !GetAtt CreateSecretLambdaFunction.Arn
+  CreateSecretLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: S3CopyInvoke
+    Properties:
+      Role: !GetAtt CreateSecretLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 60
+      Layers:
+        - !Ref CryptographyLayer39
+      ReservedConcurrentExecutions: 1
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_create_secret_function/lambda.zip'
+  CreateSecretLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${CreateSecretLambdaFunction}'
+      RetentionInDays: 90
+  apiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'headend-system-simulator-api'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  ReadingsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref apiGateway
+      ParentId: !GetAtt apiGateway.RootResourceId
+      PathPart: 'readings'
+  ReadingsFileResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref apiGateway
+      ParentId: !Ref ReadingsResource
+      PathPart: 'file'
+  ReadingsRootGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref apiGateway
+      ResourceId: !Ref ReadingsResource
+      RequestValidatorId: !Ref RequestParameterValidator
+      AuthorizationType: NONE
+      HttpMethod: GET
+      RequestParameters:
+        method.request.querystring.start_date: true
+        method.request.querystring.offset: false
+        method.request.querystring.page_size: false
+      MethodResponses:
+        - ResponseModels: { "application/json": "Empty" }
+          StatusCode: 200
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt ReadingsGetLambdaFunction.Arn
+  ReadingsFilePostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref apiGateway
+      ResourceId: !Ref ReadingsFileResource
+      RequestValidatorId: !Ref RequestBodyValidator
+      AuthorizationType: NONE
+      HttpMethod: POST
+      MethodResponses:
+        - ResponseModels: { "application/json": "Empty" }
+          StatusCode: 200
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt ReadingsFilePostLambdaFunction.Arn
+  ReadingsFileGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref apiGateway
+      ResourceId: !Ref ReadingsFileResource
+      RequestValidatorId: !Ref RequestParameterValidator
+      AuthorizationType: NONE
+      HttpMethod: GET
+      RequestParameters:
+        method.request.querystring.request_id: true
+      MethodResponses:
+        - ResponseModels: { "application/json": "Empty" }
+          StatusCode: 200
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt ReadingsFileGetLambdaFunction.Arn
+  apiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ReadingsRootGetMethod
+      - ReadingsFilePostMethod
+      - ReadingsFileGetMethod
+    Properties:
+      RestApiId: !Ref apiGateway
+      StageName: 'prod'
+  WranglerLayer39:
+    Type: AWS::Lambda::LayerVersion
+    DependsOn: S3CopyInvoke
+    Properties:
+      LayerName: 'awswrangler_py3_9'
+      Description: 'AWS Data Wrangler Lambda Layer - 2.16.1 (Python 3.9)'
+      CompatibleRuntimes:
+        - 'python3.9'
+      CompatibleArchitectures:
+        - 'x86_64'
+      Content:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_awswrangler_py3_9_layer/lambda.zip'
+      LicenseInfo: 'Apache 2.0'
+  RequestParameterValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      RestApiId: !Ref apiGateway
+      ValidateRequestBody: false
+      ValidateRequestParameters: true
+  RequestBodyValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      RestApiId: !Ref apiGateway
+      ValidateRequestBody: true
+      ValidateRequestParameters: false
+  ReadingsGetLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: S3CopyInvoke
+    Properties:
+      Role: !GetAtt ReadingsGetLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 256
+      Timeout: 300
+      Layers:
+        - !Ref WranglerLayer39
+      Environment:
+        Variables:
+          TIMESTREAM_DATABASE: !If [ createTimestream, !Ref TimestreamDatabase, !Ref TimestreamDatabaseName ]
+          TIMESTREAM_TABLE: !If [ createTimestream, !GetAtt TimestreamTable.Name, !Ref TimestreamTableName ]
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_readings_get_function/lambda.zip'
+  ReadingsGetLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ReadingsGetLambdaFunction}'
+      RetentionInDays: 90
+  ReadingsGetLambdaFunctionInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ReadingsGetLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/GET/readings
+  ReadingsGetLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  ReadingsGetLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref ReadingsGetLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${ReadingsGetLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsGetLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsGetLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsGetLambdaFunction}:*:*'
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:DescribeEndpoints'
+              - 'timestream:SelectValues'
+              - 'timestream:CancelQuery'
+            Resource: '*'
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:Select'
+            Resource: !If [ createTimestream, !GetAtt TimestreamTable.Arn, !Join [ '/', [ !Join [ ':', [ 'arn' , 'aws', 'timestream', !Ref AWS::Region, !Ref AWS::AccountId, 'database' ] ] , !Ref TimestreamDatabaseName, 'table', !Ref TimestreamTableName ] ] ]
+  ReadingsFileGetLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: S3CopyInvoke
+    Properties:
+      Role: !GetAtt ReadingsFileGetLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 256
+      Timeout: 300
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DynamoTable
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_readings_file_get_function/lambda.zip'
+  ReadingsFileGetLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ReadingsFileGetLambdaFunction}'
+      RetentionInDays: 90
+  ReadingsFileGetLambdaFunctionInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ReadingsFileGetLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/GET/readings/file
+  ReadingsFileGetLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  ReadingsFileGetLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref ReadingsFileGetLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${ReadingsFileGetLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:BatchGetItem'
+              - 'dynamodb:GetItem'
+              - 'dynamodb:Query'
+              - 'dynamodb:Scan'
+            Resource: !GetAtt DynamoTable.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileGetLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileGetLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileGetLambdaFunction}:*:*'
+  ReadingsFilePostLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: S3CopyInvoke
+    Properties:
+      Role: !GetAtt ReadingsFilePostLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 120
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref ReadingsFileSQSQueue
+          DYNAMODB_TABLE: !Ref DynamoTable
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !Ref QSS3BucketName
+        S3Key: !Sub '${QSS3KeyPrefix}assets/lambda/hes_readings_file_post_function/lambda.zip'
+  ReadingsFilePostLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ReadingsFilePostLambdaFunction}'
+      RetentionInDays: 90
+  ReadingsFilePostLambdaFunctionInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ReadingsFilePostLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/POST/readings/file
+  ReadingsFilePostLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  ReadingsFilePostLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref ReadingsFilePostLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${ReadingsFilePostLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:PutItem'
+              - 'dynamodb:UpdateItem'
+            Resource: !GetAtt DynamoTable.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'sqs:SendMessage'
+              - 'sqs:GetQueueAttributes'
+            Resource: !GetAtt ReadingsFileSQSQueue.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFilePostLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFilePostLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFilePostLambdaFunction}:*:*'
+  ReadingsFileWorkerLambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: S3CopyInvoke
+    Properties:
+      Role: !GetAtt ReadingsFileWorkerLambdaRole.Arn
+      Runtime: python3.9
+      MemorySize: 256
+      Timeout: 900
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref ReadingsFileSQSQueue
+          BUCKET: !Ref HssSimulatorBucket
+          DYNAMODB_TABLE: !Ref DynamoTable
+          REGION_NAME: !Ref AWS::Region
+          GLUE_JOB_NAME: !Ref GlueJob
+          TIMESTREAM_DATABASE: !If [ createTimestream, !Ref TimestreamDatabase, !Ref TimestreamDatabaseName ]
+          TIMESTREAM_TABLE: !If [ createTimestream, !GetAtt TimestreamTable.Name, !Ref TimestreamTableName ]
+      Handler: 'lambda_function.lambda_handler'
+      Code:
+        S3Bucket: !Ref HssSimulatorBucket
+        S3Key: 'assets/lambda/hes_readings_file_worker_function/lambda.zip'
+  ReadingsFileWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ReadingsFileWorkerLambdaFunction}'
+      RetentionInDays: 90
+  ReadingsFileWorkerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - 'sts:AssumeRole'
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+        Version: '2012-10-17'
+  ReadingsFileWorkerLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref ReadingsFileWorkerLambdaRole
+      PolicyName: !Sub '${AWS::Region}-${ReadingsFileWorkerLambdaFunction}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+            Resource: !Sub ${HssSimulatorBucket.Arn}
+          - Effect: 'Allow'
+            Action:
+              - 'sqs:ReceiveMessage'
+              - 'sqs:DeleteMessage'
+              - 'sqs:GetQueueAttributes'
+            Resource: !GetAtt ReadingsFileSQSQueue.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:DescribeEndpoints'
+              - 'timestream:SelectValues'
+              - 'timestream:CancelQuery'
+            Resource: '*'
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:Select'
+            Resource: !If [ createTimestream, !GetAtt TimestreamTable.Arn, !Join [ '/', [ !Join [ ':', [ 'arn' , 'aws', 'timestream', !Ref AWS::Region, !Ref AWS::AccountId, 'database' ] ] , !Ref TimestreamDatabaseName, 'table', !Ref TimestreamTableName ] ] ]
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:PutItem'
+              - 'dynamodb:UpdateItem'
+            Resource: !GetAtt DynamoTable.Arn
+          - Effect: 'Allow'
+            Action:
+              - 'glue:StartJobRun'
+            Resource: !Sub
+              - arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${GlueJob}
+              - GlueJob: !Ref GlueJob
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileWorkerLambdaFunction}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileWorkerLambdaFunction}:*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ReadingsFileWorkerLambdaFunction}:*:*'
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service:
+                - 'glue.amazonaws.com'
+        Version: '2012-10-17'
+  GlueJobPolicy:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E9101
+          ignore_reasons:
+            E9101: 'AbortMultipartUpload is an s3 action and can not be renamed'
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref GlueJobRole
+      PolicyName: !Sub '${AWS::Region}-${GlueJob}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:DescribeEndpoints'
+              - 'timestream:SelectValues'
+              - 'timestream:CancelQuery'
+            Resource: '*'
+          - Effect: 'Allow'
+            Action:
+              - 'timestream:Select'
+            Resource: !If [ createTimestream, !GetAtt TimestreamTable.Arn, !Join [ '/', [ !Join [ ':', [ 'arn' , 'aws', 'timestream', !Ref AWS::Region, !Ref AWS::AccountId, 'database' ] ] , !Ref TimestreamDatabaseName, 'table', !Ref TimestreamTableName ] ] ]
+          - Effect: 'Allow'
+            Action:
+              - 'dynamodb:PutItem'
+              - 'dynamodb:UpdateItem'
+            Resource: !GetAtt DynamoTable.Arn
+          - Effect: 'Allow'
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !Sub ${HssSimulatorBucket.Arn}
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:CreateMultipartUpload'
+              - 's3:AbortMultipartUpload'
+              - 's3:ListMultipartUploadParts'
+            Resource: !Sub ${HssSimulatorBucket.Arn}/*
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*/*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*/*/*'
+  GlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      GlueVersion: '3.0'
+      WorkerType: 'G.1X'
+      NumberOfWorkers: 10
+      ExecutionProperty:
+        MaxConcurrentRuns: 50
+      DefaultArguments:
+        '--job-bookmark-option': 'job-bookmark-disabled'
+      Command:
+        Name: 'glueetl'
+        PythonVersion: '3'
+        ScriptLocation: !Sub 's3://${HssSimulatorBucket}/assets/glue/scripts/timestream_to_s3.py'
+      Role: !GetAtt GlueJobRole.Arn
+  SFTPServer:
+    Type: AWS::Transfer::Server
+    Properties:
+      EndpointType: 'PUBLIC'
+  SFTPUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'transfer.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'root'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                Resource: !Sub ${HssSimulatorBucket.Arn}
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:DeleteObject'
+                  - 's3:DeleteObjectVersion'
+                Resource: !Sub '${HssSimulatorBucket.Arn}/*'
+  SFTPUser:
+    Type: AWS::Transfer::User
+    Properties:
+      ServerId: !GetAtt SFTPServer.ServerId
+      UserName: 'sftp-user'
+      HomeDirectory: !Sub '/${HssSimulatorBucket}/data/sftp'
+      Policy: >
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+              "Sid": "AllowListingOfUserFolder",
+              "Effect": "Allow",
+              "Action": "s3:ListBucket",
+              "Resource": "arn:aws:s3:::${transfer:HomeBucket}",
+              "Condition": {
+                "StringLike": {
+                  "s3:prefix": [
+                    "${transfer:HomeFolder}/*",
+                    "${transfer:HomeFolder}"
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "HomeDirObjectAccess",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+              ],
+              "Resource": "arn:aws:s3:::${transfer:HomeDirectory}*"
+            }
+          ]
+        }
+      Role: !GetAtt SFTPUserRole.Arn
+      SshPublicKeys:
+        - !GetAtt CreateSecretInvoke.PublicKey
+Outputs:
+  TimestreamDatabaseARN:
+    Description: 'ARN of Timestream database.'
+    Value: !If [ createTimestream, !GetAtt TimestreamDatabase.Arn, !Join [ '/', [ !Join [ ':', [ 'arn' , 'aws', 'timestream', !Ref AWS::Region, !Ref AWS::AccountId, 'database' ] ] , !Ref TimestreamDatabaseName ] ] ]
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'TimestreamDatabaseARN' ] ]
+  TimestreamTableARN:
+    Description: 'ARN of Timestream table.'
+    Value: !If [ createTimestream, !GetAtt TimestreamTable.Arn, !Join [ '/', [ !Join [ ':', [ 'arn' , 'aws', 'timestream', !Ref AWS::Region, !Ref AWS::AccountId, 'database' ] ] , !Ref TimestreamDatabaseName, 'table', !Ref TimestreamTableName ] ] ]
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'TimestreamTableARN' ] ]
+  TimestreamDatabaseName:
+    Description: 'Name of Timestream database.'
+    Value: !If [ createTimestream, !Ref TimestreamDatabase, !Ref TimestreamDatabaseName ]
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'TimestreamDatabaseName' ] ]
+  TimestreamTableName:
+    Description: 'Name of Timestream table.'
+    Value: !If [ createTimestream, !GetAtt TimestreamTable.Name, !Ref TimestreamTableName ]
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'TimestreamTableName' ] ]
+  apiGatewayInvokeURL:
+    Description: 'API Gateway URL.'
+    Value: !Sub https://${apiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'apiGatewayInvokeURL' ] ]
+  SftpServerAddress:
+    Description: 'SFTP server address.'
+    Value: !Sub ${SFTPServer.ServerId}.server.transfer.${AWS::Region}.amazonaws.com
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'SftpServerAddress' ] ]
+  SftpUserName:
+    Description: 'SFTP user name.'
+    Value: !GetAtt SFTPUser.UserName
+    Export:
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'SftpUser' ] ]
+  CreateSecretResult:
+    Value: !GetAtt CreateSecretInvoke.Result
+  SecretARN:
+    Value: !GetAtt CreateSecretInvoke.SecretARN
+  SecretName:
+    Value: !GetAtt CreateSecretInvoke.SecretName

@@ -3,7 +3,7 @@
 cd ../../functions
 HOME=$(pwd)
 
-rm packages/*.zip
+rm packages/**/*.zip
 
 dirlist=(`ls $HOME/source`)
 
