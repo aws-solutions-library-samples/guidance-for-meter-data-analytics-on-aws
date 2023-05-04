@@ -115,7 +115,7 @@ Resources:
       Handler: app.lambda_handler
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}functions/packages/sqs_status_check/lambda.zip'
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/sqs_status_check/lambda.zip'
       MemorySize: 128
       Timeout: 10
       Runtime: python3.9

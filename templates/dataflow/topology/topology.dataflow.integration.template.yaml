@@ -87,7 +87,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/topology_transformer/lambda.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/topology_transformer/lambda.zip'
       Description: Lambda function to transform topology data
       MemorySize: 512
       Timeout: 240

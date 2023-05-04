@@ -3,8 +3,6 @@ ONLY=$1
 
 HOME=$(pwd)
 
-./create_deployment_packages.sh
-
 rm -fr ../assets/lambda
 cd ../source/lambda/
 

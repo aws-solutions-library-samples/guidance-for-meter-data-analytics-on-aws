@@ -89,7 +89,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_input/lambda.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_volt_var_input/lambda.zip'
       Timeout: 120
       MemorySize: 128
       Layers:
@@ -111,7 +111,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_avg_voltage/lambda.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_volt_var_avg_voltage/lambda.zip'
       Timeout: 300
       MemorySize: 256
       Layers:
@@ -141,7 +141,7 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/feature_volt_var_calculator/lambda.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_volt_var_calculator/lambda.zip'
       Timeout: 30
       MemorySize: 128
       Layers:
@@ -329,7 +329,7 @@ Resources:
         - !Ref CrhelperLayer
       Code:
         S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
-        S3Key: !Sub '${QSS3KeyPrefix}functions/packages/s3_copy_custom_resource/lambda.zip'
+        S3Key: !Sub '${QSS3KeyPrefix}assets/lambda/s3_copy_custom_resource/lambda.zip'
 
   CrhelperLayer:
     Type: AWS::Lambda::LayerVersion

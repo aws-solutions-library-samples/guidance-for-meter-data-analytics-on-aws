@@ -15,7 +15,8 @@ if ! aws cloudformation describe-stacks --region $REGION --stack-name $STACK_NAM
                                 --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
                                 --template-body file://../templates/work-load.template.yaml \
                                 --parameters file://$PARAMETER_FILE \
-                                --region $REGION
+                                --region $REGION \
+                                --disable-rollback
 
   echo "Waiting for stack to be created ..."
   aws cloudformation wait stack-create-complete --stack-name $STACK_NAME --region $REGION

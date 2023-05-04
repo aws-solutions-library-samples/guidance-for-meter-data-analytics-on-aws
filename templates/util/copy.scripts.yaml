@@ -20,7 +20,7 @@ Resources:
         DestBucket: !Ref MdaGlueScriptBucket
         DestPrefix: 'scripts/'
         SourceBucket: !Ref QSS3BucketName
-        Prefix: !Sub '${QSS3KeyPrefix}/assets/glue/scripts'
+        Prefix: !Sub '${QSS3KeyPrefix}assets/glue/scripts/'
         Objects:
           - meterreadings-integration-job.py
           - weatherdata-integration-job.py
@@ -52,8 +52,10 @@ Resources:
                 - Effect: Allow
                   Action:
                     - s3:GetObject
+                    - s3:GetObjectTagging
                     - s3:ListObjectVersions
                   Resource:
+                    - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}'
                     - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
                 - Effect: Allow
                   Action:
@@ -61,6 +63,7 @@ Resources:
                     - s3:DeleteObject
                     - s3:DeleteObjects
                     - s3:GetObject
+                    - s3:PutObjectTagging
                     - s3:GetObjectVersion
                     - s3:GetObjectAttributes
                     - s3:ListBucket
@@ -80,7 +83,7 @@ Resources:
       Properties:
         Description: Copies objects from a source S3 bucket to a destination
         Handler: index.handler
-        Runtime: python3.7
+        Runtime: python3.9
         Role: !GetAtt CopyArtifactsRole.Arn
         Timeout: 240
         Code:
@@ -130,6 +133,7 @@ Resources:
                 logging.error('Execution is about to time out, sending failure response to CloudFormation')
                 cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
             def handler(event, context):
+                print(event)
                 # make sure we send a failure to CloudFormation if the function
                 # is going to timeout
                 timer = threading.Timer((context.get_remaining_time_in_millis()
