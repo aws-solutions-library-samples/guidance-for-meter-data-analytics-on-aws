@@ -9,6 +9,7 @@ Metadata:
         RuleId: E9101
       ignore_checks:
         - E9101
+        - E9008
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -195,7 +196,7 @@ Resources:
     Properties:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}functions/packages/late_arriving_notification/lambda.zip'
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/late_arriving_notification/lambda.zip'
       Description: lambda to be called on object creation to adapt objects to clean format S3
       Environment:
         Variables:

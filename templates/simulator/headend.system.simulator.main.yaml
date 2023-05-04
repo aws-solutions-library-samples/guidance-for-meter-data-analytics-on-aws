@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Headend System Simulator with optional Device Data Generator (SO9213)'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Deployment configuration'
+        Parameters:
+          - DeviceDataGeneratorInclude
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
+      - Label:
+          default: 'Timestream configuration'
+        Parameters:
+          - TimestreamCreation
+          - TimestreamDatabaseName
+          - TimestreamTableName
+      - Label:
+          default: 'Generator configuration'
+        Parameters:
+          - GenerationState
+          - GenerationInterval
+          - TotalDevices
+          - DevicesPerWorker
+          - RegionalVoltage
+          - MinLoad
+          - MaxLoad
+          - LateArrivalSimulate
+          - LateArrivalPercent
+          - LateArrivalMinuteOffset
+    ParameterLabels:
+      DeviceDataGeneratorInclude:
+        default: 'Deploy the Device Data Generator stack'
+      TimestreamCreation:
+        default: 'Use existing Timestream database and table or create new ones'
+      TimestreamDatabaseName:
+        default: 'Name of new or existing Timestream database'
+      TimestreamTableName:
+        default: 'Name of new or existing Timestream table'
+      GenerationState:
+        default: 'Desired state generating device readings'
+      GenerationInterval:
+        default: 'Frequency to generate device readings'
+      TotalDevices:
+        default: 'Number of devices to generate readings at each interval'
+      DevicesPerWorker:
+        default: 'Number of devices each Lambda worker handles'
+      RegionalVoltage:
+        default: 'Voltage to base device readings'
+      MinLoad:
+        default: 'Minimum contract load KW for a device'
+      MaxLoad:
+        default: 'Maximum contract load KW for a device'
+      LateArrivalSimulate:
+        default: 'Simulate late arriving data'
+      LateArrivalPercent:
+        default: 'Percent of device readings to arrive late'
+      LateArrivalMinuteOffset:
+        default: 'Number of minutes for late records to arrive'
+      QSS3BucketName:
+        default: 'Name of S3 bucket where assets are hosted'
+      QSS3KeyPrefix:
+        default: 'Prefix (directory) where assets are located'
+      QSS3BucketRegion:
+        default: 'AWS Region where S3 bucket is located'
+Parameters:
+  TimestreamCreation:
+    Description: Use existing Timestream database or create new one.
+    Default: 'Create New'
+    Type: String
+    AllowedValues:
+      - 'Create New'
+      - 'Use Existing'
+  TimestreamDatabaseName:
+    Description: Database name
+    Type: String
+    Default: 'devices'
+    MinLength: 3
+    MaxLength: 256
+  TimestreamTableName:
+    Description: Table name
+    Type: String
+    Default: 'readings'
+    MinLength: 3
+    MaxLength: 256
+  DeviceDataGeneratorInclude:
+    Description: Include generator in deployment
+    Default: 'Yes'
+    Type: String
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+  GenerationState:
+    Description: 'Change to DISABLE at any time to stop generation of device readings.'
+    Type: String
+    Default: 'ENABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+  GenerationInterval:
+    Description: 'Minutes per interval, must be greater than 5.'
+    Type: Number
+    Default: 5
+    MinValue: 5
+    ConstraintDescription: 'GenerationInterval must contain a numeric value greater than 5.'
+  TotalDevices:
+    Description: 'Number of devices to generate readings at each interval.'
+    Type: Number
+    Default: 50000
+  DevicesPerWorker:
+    Description: 'Higher number means less Lambda workers invoked, but longer time to generate readings.'
+    Type: Number
+    Default: 10000
+  RegionalVoltage:
+    Description: 'Number of volts for country.'
+    Type: Number
+    Default: 220
+  MinLoad:
+    Description: 'Minimum contract load KW.'
+    Type: Number
+    Default: 5
+    MinValue: 0
+    MaxValue: 100
+  MaxLoad:
+    Description: 'Maximum contract load KW.'
+    Type: Number
+    Default: 20
+    MinValue: 0
+    MaxValue: 100
+  LateArrivalSimulate:
+    Description: 'Change to ENABLED at any time to simlate late arriving device readings.'
+    Type: String
+    Default: 'DISABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+  LateArrivalPercent:
+    Description: 'Percent of late arriving device readings.'
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+  LateArrivalMinuteOffset:
+    Description: 'Delay (in minutes) for late arriving device readings.'
+    Type: Number
+    Default: 1440
+    MinValue: 1
+    MaxValue: 43200
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
+    ConstraintDescription: >-
+      The S3 bucket name can include numbers, lowercase letters, 
+      and hyphens (-), but it cannot start or end with a hyphen.
+    Default: aws-quickstart
+    Description: >-
+      Name of the S3 bucket for your copy of the deployment assets. Keep the default
+      name unless you are customizing the template. Changing the name updates code 
+      references to point to a new location.
+    MinLength: 3
+    MaxLength: 63
+    Type: String    
+  QSS3KeyPrefix:
+    AllowedPattern: ^([0-9a-zA-Z!-_\.\*'\(\)/]+/)*$
+    ConstraintDescription: >-
+      The S3 key prefix can include numbers, lowercase letters, uppercase letters, 
+      hyphens (-), underscores (_), periods (.), asterisks (*), single quotes ('),
+      open parenthesis ((), close parenthesis ()), and forward slashes (/). End the
+      prefix with a forward slash.
+    Default: 'quickstart-aws-utility-meter-headend-system-simulator/'
+    Description: >-
+      S3 key prefix that is used to simulate a folder for your copy of the 
+      deployment assets. Keep the default prefix unless you are customizing 
+      the template. Changing the prefix updates code references to point to 
+      a new location.
+    Type: String    
+  QSS3BucketRegion:
+    Default: us-east-1
+    Description: >-
+      AWS Region where the S3 bucket (QSS3BucketName) is hosted. Keep 
+      the default Region unless you are customizing the template. Changing the Region 
+      updates code references to point to a new location. When using your own bucket, 
+      specify the Region.
+    Type: String
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+  CreateTimeStream: !Equals [ !Ref TimestreamCreation, 'Create New' ]
+  CreateDeviceDataGeneratorStack: !Equals [ !Ref DeviceDataGeneratorInclude, 'Yes' ]
+Resources:
+  HeadEndSystemSimulatorStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/simulator/headend.system.simulator.yaml'
+        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      Parameters:
+        TimestreamCreation: !If [ CreateTimeStream, 'Create New', 'Use Existing' ]
+        TimestreamDatabaseName: !Sub '${TimestreamDatabaseName}-${AWS::Region}'
+        TimestreamTableName: !Ref TimestreamTableName
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+
+  DeviceDataGeneratorStack:
+    Condition: CreateDeviceDataGeneratorStack
+    DependsOn: HeadEndSystemSimulatorStack
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/simulator/device.data.generator.yaml'
+        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      Parameters:
+        GenerationState: !Ref GenerationState
+        GenerationInterval: !Ref GenerationInterval
+        TotalDevices: !Ref TotalDevices
+        DevicesPerWorker: !Ref DevicesPerWorker
+        RegionalVoltage: !Ref RegionalVoltage
+        MinLoad: !Ref MinLoad
+        MaxLoad: !Ref MaxLoad
+        LateArrivalSimulate: !Ref LateArrivalSimulate
+        LateArrivalPercent: !Ref LateArrivalPercent
+        LateArrivalMinuteOffset: !Ref LateArrivalMinuteOffset
+        TimestreamCreation: 'Use Existing'
+        TimestreamDatabaseName: !Sub '${TimestreamDatabaseName}-${AWS::Region}'
+        TimestreamTableName: !Ref TimestreamTableName
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+Outputs:
+  StackName:
+    Description: 'Stack name.'
+    Value: !Sub '${AWS::StackName}'
+  ApiGatewayInvokeURL:
+    Description: 'API Gateway URL.'
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.ApiGatewayInvokeURL
+  SftpServerAddress:
+    Description: 'SFTP server address.'
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.SftpServerAddress
+  SftpUserName:
+    Description: 'SFTP user name.'
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.SftpUserName
+  SecretARN:
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.SecretARN
+  SecretName:
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.SecretName

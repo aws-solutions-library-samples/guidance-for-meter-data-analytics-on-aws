@@ -23,7 +23,7 @@ Resources:
     Condition: DeployMeterGeneratorAndHesSimulator
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-utility-meter-headend-system-simulator/templates/headend.system.simulator.main.yaml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/simulator/headend.system.simulator.main.yaml'
         - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
           S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
@@ -34,7 +34,8 @@ Resources:
         LateArrivalSimulate: 'DISABLED'
         LateArrivalPercent: 10
         LateArrivalMinuteOffset: 1440
-        QSS3BucketName: !Sub 'aws-quickstart-${AWS::Region}'
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
   IntegrationStack:
@@ -96,7 +97,7 @@ Resources:
         SFTPServerAddress: !GetAtt MeterDataGeneratorStack.Outputs.SftpServerAddress
         SFTPUserName: !GetAtt MeterDataGeneratorStack.Outputs.SftpUserName
         SFTPSecretARN: !GetAtt MeterDataGeneratorStack.Outputs.SecretARN
-        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.apiGatewayInvokeURL
+        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.ApiGatewayInvokeURL
         InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
 
   WeatherDataflowStack:

@@ -160,7 +160,7 @@ Resources:
       Description: Determines the steps the ML Pipeline will take.
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_steps/lambda.zip'
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/ml_pipeline_steps/lambda.zip'
       Handler: app.lambda_handler
       Runtime: python3.9
       MemorySize: 128
@@ -215,7 +215,7 @@ Resources:
       Description: Gets the parameter values for the ML Pipeline.
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_parameters/lambda.zip'
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/ml_pipeline_parameters/lambda.zip'
       Handler: app.lambda_handler
       Runtime: python3.9
       MemorySize: 128
@@ -233,7 +233,7 @@ Resources:
       Timeout: 30
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
-        Key: !Sub '${QSS3KeyPrefix}functions/packages/ml_pipeline_has_endpoint/lambda.zip'
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/ml_pipeline_has_endpoint/lambda.zip'
       Handler: app.lambda_handler
       Runtime: python3.9
       Role: !GetAtt MLLambdaHelpersIAMRole.Arn
@@ -443,7 +443,7 @@ Resources:
       DefinitionS3Location:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/mlpipeline-training-machine.json'
+          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/mlpipeline-training-machine.json'
       DefinitionSubstitutions:
         MLResourcesBucket: !Ref MlResourcesBucket
         GluePrepareTrainingJobName: !Ref PrepareTrainingGlueJob
@@ -460,7 +460,7 @@ Resources:
       DefinitionS3Location:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/mlpipeline-orchestrator-machine.json'
+          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/mlpipeline-orchestrator-machine.json'
       DefinitionSubstitutions:
         MLResourcesBucket: !Ref MlResourcesBucket
         GlueAnomalyJobName: !Ref AnomalyDetectionGlueJob

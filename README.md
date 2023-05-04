@@ -1,55 +1,33 @@
 # Guidance for Meter Data Analytics on AWS
 
-## CI Checks
-### Tascat
-Install and run [Taskcat](https://github.com/aws-ia/taskcat)
-
-### CFN Lint
-Install and run [CFN Lint](https://github.com/aws-cloudformation/cfn-lint) + [Custom RuleSet](https://github.com/aws-quickstart/qs-cfn-lint-rules)
-
-`cfn-lint templates/**/*.yaml -a ../qs-cfn-lint-rules/qs_cfn_lint_rules/ > cfn-lint_output.txt`
-
 ## Customized deployment
 
-With this instruction you will be able to deploy a customized built of the quickstart to your own account.
+With this instruction describes how to deploy the Meter Data Analytics (MDA) guidance to your own account.
 
-### Clone submodules
-```bash
-cd submodules
-git submodule init 
-git submodule update
-cd -
-```
+### Prerequisite
 
-### Package Lambda functions
+- Docker
 
-If functions were adjusted the functions have to be packaged first.
-To package the Lambda functions run the following script:
+### 1. Copy the MDA data to your own S3 Bucket
 
-```bash
-cd scripts/bin
-./create_deployment_packages.sh
-cd -
-```
+The MDA artefacts have to be copied to an S3 bucket from which it will be deployed.
+Before copying to S3, the sync script packages all AWS Lambda functions (Docker required).
 
-### Copy the MDA to your own S3 Bucket
-
-The updated content have to be copied to an S3 bucket from which it will be deployed.
-
-1. create an S3 Bucket in your account
+1. Create an S3 Bucket in your account:
    `aws s3 mb s3://mda-data-<account_id>`
-2. use the `sync.sh` script to sync the needed artefacts to S3
+
+2. Use the `sync.sh` script to sync the needed artefacts to S3:
    ```bash
    cd scripts/bin
-   ./sync.sh mda-data-<account_id>/artefacts
+   ./sync.sh mda-data-<account_id>/artefacts us-east-1
    ```
 
-### Create configuration
+### 2. Create configuration
 
 The configuration parameter can be provided via the Console, CLI or File.
 Here we use the provided script `apply-stack.sh` to deploy the Quick Start, the scripts expects the parameter json as an input value.
 
-Adjust the following template and store it besides the `apply-script.sh` as `stack-parameter.json`. (will create a new VPC)
+Adjust the following template and store it besides the `apply-stack.sh` as `stack-parameter.json`. 
 
 ```json
 [
@@ -80,18 +58,26 @@ Adjust the following template and store it besides the `apply-script.sh` as `sta
 ]
 ```
 
-### Deploy MDA
+### 3. Deploy the MDA
 
-Call the apply script and provide the stack parameter file:
 ```bash
 cd scripts/bin
-./apply-stack.sh stack-parameter.json
+./apply-stack.sh stack-parameter.json us-east-1
 ```
 
-### Delete the MDA stack
+### 4. Delete the MDA stack
 
-The delete script will empty all buckets before removing the stack
+The delete script will empty all buckets before removing the stack.
 ```bash
 cd scripts/bin
 ./delete-stack.sh
 ```
+
+## CI Checks (Optional)
+### Taskcat
+Install and run [Taskcat](https://github.com/aws-ia/taskcat)
+
+### CFN Lint
+Install and run [CFN Lint](https://github.com/aws-cloudformation/cfn-lint) + [Custom RuleSet](https://github.com/aws-quickstart/qs-cfn-lint-rules)
+
+`cfn-lint templates/**/*.yaml -a ../qs-cfn-lint-rules/qs_cfn_lint_rules/ > cfn-lint_output.txt`

@@ -114,14 +114,12 @@ Resources:
       CodeUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}functions/packages/weather_load/lambda.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/weather_load/lambda.zip'
       Description: Lambda function to load weather data on a regular schedule
       MemorySize: 512
       Timeout: 300
       Runtime: python3.9
       Role: !GetAtt 'RunLambdaRole.Arn'
-      Layers:
-        - !Ref DependencyLayer
       Environment:
         Variables:
           staging_data_bucket: !Ref StagingDataBucket
@@ -133,19 +131,6 @@ Resources:
             Name: 'WeatherLoadTrigger'
             Description: Loads the latest weather information every night at 1
             Enabled: true
-
-  DependencyLayer:
-    Type: 'AWS::Serverless::LayerVersion'
-    Properties:
-      LayerName: !Sub "weather-load-lambda-layer-${AWS::Region}"
-      Description: Dependencies for weather load lambda
-      ContentUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
-        Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/weather/weather-load-layer.zip'
-      CompatibleRuntimes:
-        - python3.9
-      LicenseInfo: 'Available under the MIT-0 license.'
 
   #
   #

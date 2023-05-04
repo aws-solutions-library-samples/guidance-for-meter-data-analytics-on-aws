@@ -159,7 +159,7 @@ Resources:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub:
-            - '${QSS3KeyPrefix}functions/packages/${ExtractorFunction}/lambda.zip'
+            - '${QSS3KeyPrefix}assets/lambda/${ExtractorFunction}/lambda.zip'
             - ExtractorFunction:
                 Fn::FindInMap:
                   - AdapterFunctions
@@ -200,7 +200,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/kinesis_producer/layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/layers/kinesis_producer/layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'
@@ -214,7 +214,7 @@ Resources:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
           Fn::Sub:
-            - '${QSS3KeyPrefix}functions/packages/${WorkerFunction}/lambda.zip'
+            - '${QSS3KeyPrefix}assets/lambda/${WorkerFunction}/lambda.zip'
             - WorkerFunction:
                 Fn::FindInMap:
                   - AdapterFunctions
