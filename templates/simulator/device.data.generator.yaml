@@ -116,17 +116,20 @@ Parameters:
     MinValue: 1
     MaxValue: 43200
   TimestreamCreation:
+    Description: Use existing database or create new one.
     Default: 'Use Existing'
     Type: String
     AllowedValues:
       - 'Create New'
       - 'Use Existing'
   TimestreamDatabaseName:
+    Description: Database name
     Type: String
     Default: 'devices'
     MinLength: 3
     MaxLength: 256
   TimestreamTableName:
+    Description: Table name
     Type: String
     Default: 'readings'
     MinLength: 3

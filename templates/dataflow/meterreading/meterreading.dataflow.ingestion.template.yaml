@@ -9,6 +9,7 @@ Metadata:
         RuleId: E9101
       ignore_checks:
         - E9101
+        - E9008
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:

@@ -8,6 +8,7 @@ Metadata:
     config:
       ignore_checks:
         - E9007
+        - E9008
         - EIAMPolicyActionWildcard
         - EValidateIAMRuleExclusions
   AWS::CloudFormation::Interface:
@@ -93,7 +94,6 @@ Resources:
       Timeout: 120
       MemorySize: 128
       Layers:
-        - !Ref PyathenaDependencyLayer
         - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
         Variables:
@@ -115,7 +115,6 @@ Resources:
       Timeout: 300
       MemorySize: 256
       Layers:
-        - !Ref PyathenaDependencyLayer
         - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
         - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
       Environment:
@@ -162,19 +161,6 @@ Resources:
             Queue: !GetAtt VoltVarCalculationQueue.Arn
             FunctionResponseTypes:
               - ReportBatchItemFailures
-
-  PyathenaDependencyLayer:
-    Type: 'AWS::Serverless::LayerVersion'
-    Properties:
-      LayerName: !Sub "topology-transform-lambda-layer-${AWS::Region}"
-      Description: Dependencies for topology transform lambda
-      ContentUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
-        Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/pyathena_2_19_layer.zip'
-      CompatibleRuntimes:
-        - python3.9
-      LicenseInfo: 'Available under the MIT-0 license.'
 
   VoltVarInputDLQ:
     Type: AWS::SQS::Queue

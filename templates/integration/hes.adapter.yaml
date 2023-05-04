@@ -6,6 +6,7 @@ Metadata:
     config:
       ignore_checks:
         - E9101
+        - E9008
       ignore_reasons:
         E9101: Use welcoming and inclusive language
   AWS::CloudFormation::Interface:

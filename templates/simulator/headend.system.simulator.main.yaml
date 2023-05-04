@@ -67,22 +67,26 @@ Metadata:
         default: 'AWS Region where S3 bucket is located'
 Parameters:
   TimestreamCreation:
+    Description: Use existing Timestream database or create new one.
     Default: 'Create New'
     Type: String
     AllowedValues:
       - 'Create New'
       - 'Use Existing'
   TimestreamDatabaseName:
+    Description: Database name
     Type: String
     Default: 'devices'
     MinLength: 3
     MaxLength: 256
   TimestreamTableName:
+    Description: Table name
     Type: String
     Default: 'readings'
     MinLength: 3
     MaxLength: 256
   DeviceDataGeneratorInclude:
+    Description: Include generator in deployment
     Default: 'Yes'
     Type: String
     AllowedValues:
@@ -227,9 +231,9 @@ Outputs:
   StackName:
     Description: 'Stack name.'
     Value: !Sub '${AWS::StackName}'
-  apiGatewayInvokeURL:
+  ApiGatewayInvokeURL:
     Description: 'API Gateway URL.'
-    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.apiGatewayInvokeURL
+    Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.ApiGatewayInvokeURL
   SftpServerAddress:
     Description: 'SFTP server address.'
     Value: !GetAtt HeadEndSystemSimulatorStack.Outputs.SftpServerAddress

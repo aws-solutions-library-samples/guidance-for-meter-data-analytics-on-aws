@@ -27,17 +27,20 @@ Metadata:
         default: 'Prefix (directory) where assets are located'
 Parameters:
   TimestreamCreation:
+    Description: Create a new TimeStream database or use an existing one.
     Default: 'Create New'
     Type: String
     AllowedValues:
       - 'Create New'
       - 'Use Existing'
   TimestreamDatabaseName:
+    Description: Database name
     Type: String
     Default: 'devices'
     MinLength: 3
     MaxLength: 256
   TimestreamTableName:
+    Description: Table name
     Type: String
     Default: 'readings'
     MinLength: 3
@@ -63,6 +66,11 @@ Parameters:
       open parenthesis ((), close parenthesis ()), and forward slashes (/). End the
       prefix with a forward slash.
     Default: 'quickstart-aws-utility-meter-headend-system-simulator/'
+    Description: >-
+      S3 key prefix that is used to simulate a folder for your copy of the
+      deployment assets. Keep the default prefix unless you are customizing
+      the template. Changing the prefix updates code references to point to
+      a new location.
     Type: String
 Conditions:
   createTimestream: !Equals [ !Ref TimestreamCreation, 'Create New' ]
@@ -284,7 +292,7 @@ Resources:
     Properties:
       LogGroupName: !Sub '/aws/lambda/${CreateSecretLambdaFunction}'
       RetentionInDays: 90
-  apiGateway:
+  HesApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: 'headend-system-simulator-api'
@@ -294,19 +302,19 @@ Resources:
   ReadingsResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: !Ref apiGateway
-      ParentId: !GetAtt apiGateway.RootResourceId
+      RestApiId: !Ref HesApiGateway
+      ParentId: !GetAtt HesApiGateway.RootResourceId
       PathPart: 'readings'
   ReadingsFileResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ParentId: !Ref ReadingsResource
       PathPart: 'file'
   ReadingsRootGetMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ResourceId: !Ref ReadingsResource
       RequestValidatorId: !Ref RequestParameterValidator
       AuthorizationType: NONE
@@ -327,7 +335,7 @@ Resources:
   ReadingsFilePostMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ResourceId: !Ref ReadingsFileResource
       RequestValidatorId: !Ref RequestBodyValidator
       AuthorizationType: NONE
@@ -344,7 +352,7 @@ Resources:
   ReadingsFileGetMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ResourceId: !Ref ReadingsFileResource
       RequestValidatorId: !Ref RequestParameterValidator
       AuthorizationType: NONE
@@ -360,14 +368,14 @@ Resources:
         Uri: !Sub
           - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
           - lambdaArn: !GetAtt ReadingsFileGetLambdaFunction.Arn
-  apiGatewayDeployment:
+  ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - ReadingsRootGetMethod
       - ReadingsFilePostMethod
       - ReadingsFileGetMethod
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       StageName: 'prod'
   WranglerLayer39:
     Type: AWS::Lambda::LayerVersion
@@ -386,13 +394,13 @@ Resources:
   RequestParameterValidator:
     Type: AWS::ApiGateway::RequestValidator
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ValidateRequestBody: false
       ValidateRequestParameters: true
   RequestBodyValidator:
     Type: AWS::ApiGateway::RequestValidator
     Properties:
-      RestApiId: !Ref apiGateway
+      RestApiId: !Ref HesApiGateway
       ValidateRequestBody: true
       ValidateRequestParameters: false
   ReadingsGetLambdaFunction:
@@ -424,7 +432,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt ReadingsGetLambdaFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/GET/readings
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HesApiGateway}/*/GET/readings
   ReadingsGetLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -490,7 +498,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt ReadingsFileGetLambdaFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/GET/readings/file
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HesApiGateway}/*/GET/readings/file
   ReadingsFileGetLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -554,7 +562,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt ReadingsFilePostLambdaFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*/POST/readings/file
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HesApiGateway}/*/POST/readings/file
   ReadingsFilePostLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -855,11 +863,11 @@ Outputs:
     Value: !If [ createTimestream, !GetAtt TimestreamTable.Name, !Ref TimestreamTableName ]
     Export:
       Name: !Join [ ':', [ !Ref AWS::StackName, 'TimestreamTableName' ] ]
-  apiGatewayInvokeURL:
+  ApiGatewayInvokeURL:
     Description: 'API Gateway URL.'
-    Value: !Sub https://${apiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Value: !Sub https://${HesApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
     Export:
-      Name: !Join [ ':', [ !Ref AWS::StackName, 'apiGatewayInvokeURL' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'ApiGatewayInvokeURL' ] ]
   SftpServerAddress:
     Description: 'SFTP server address.'
     Value: !Sub ${SFTPServer.ServerId}.server.transfer.${AWS::Region}.amazonaws.com

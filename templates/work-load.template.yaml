@@ -97,7 +97,7 @@ Resources:
         SFTPServerAddress: !GetAtt MeterDataGeneratorStack.Outputs.SftpServerAddress
         SFTPUserName: !GetAtt MeterDataGeneratorStack.Outputs.SftpUserName
         SFTPSecretARN: !GetAtt MeterDataGeneratorStack.Outputs.SecretARN
-        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.apiGatewayInvokeURL
+        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.ApiGatewayInvokeURL
         InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
 
   WeatherDataflowStack:
