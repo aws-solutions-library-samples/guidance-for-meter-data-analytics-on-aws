@@ -1,10 +1,13 @@
 #!/bin/sh -e
 ONLY=$1
 
+HOME=$(pwd)
+
 ./create_deployment_packages.sh
 
-rm -fr ../../assets/lambda
-cd ../../source/lambda/
+rm -fr ../assets/lambda
+cd ../source/lambda/
+
 for d in * ; do
     if [ "${ONLY}" == "" ] ; then  CUR_RESOURCE_PATH=$d ; else CUR_RESOURCE_PATH=$ONLY; fi
     if [ "${CUR_RESOURCE_PATH}" == "$d" ] ; then
@@ -23,4 +26,5 @@ for d in * ; do
       cd ../
     fi
   done
-cd ../../
+
+cd $HOME

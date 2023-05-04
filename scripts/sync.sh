@@ -7,6 +7,7 @@ echo "Packaging lambda functions first."
 ./lambda-package.sh
 
 echo "Sync to $1"
-cd ../..
+cd ../
 aws s3 sync . s3://$BUCKET --exclude "*" --include "scripts/assets/*" --include "scripts/layers/*" --include "functions/*" --include "templates/*" --include "showcase/data/grid_topology/*" --include "assets/*" --region $REGION
+
 cd scripts

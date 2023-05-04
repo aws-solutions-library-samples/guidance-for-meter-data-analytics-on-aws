@@ -626,7 +626,7 @@ Resources:
       DefinitionS3Location:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/assets/statemachine/readings_downloader_state_machine.json'
+          Fn::Sub: '${QSS3KeyPrefix}assets/statemachine/readings_downloader_state_machine.json'
       DefinitionSubstitutions:
         GetReadingsFileLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileLambdaFunction}:$LATEST'
         GetReadingsFileStatusLambdaFunction: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${GetReadingsFileStatusLambdaFunction}:$LATEST'

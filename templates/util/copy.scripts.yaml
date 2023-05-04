@@ -20,7 +20,7 @@ Resources:
         DestBucket: !Ref MdaGlueScriptBucket
         DestPrefix: 'scripts/'
         SourceBucket: !Ref QSS3BucketName
-        Prefix: !Sub '${QSS3KeyPrefix}scripts/assets/glue/'
+        Prefix: !Sub '${QSS3KeyPrefix}/assets/glue/scripts'
         Objects:
           - meterreadings-integration-job.py
           - weatherdata-integration-job.py

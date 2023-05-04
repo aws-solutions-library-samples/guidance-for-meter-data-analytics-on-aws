@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd ../../functions
+cd ../functions
 HOME=$(pwd)
 
 rm packages/**/*.zip
