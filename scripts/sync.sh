@@ -3,8 +3,8 @@
 BUCKET=${1:?Please specify a destination bucket name}
 REGION=${2:-us-east-1}
 
-#echo "Packaging lambda functions first."
-#./lambda-package.sh
+echo "Packaging lambda functions first."
+./lambda-package.sh
 
 echo "Sync to $1"
 cd ../

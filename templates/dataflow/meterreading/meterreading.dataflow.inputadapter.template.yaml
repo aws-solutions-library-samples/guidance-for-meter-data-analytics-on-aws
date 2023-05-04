@@ -200,7 +200,7 @@ Resources:
       ContentUri:
         Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${QSS3BucketRegion}', !Ref QSS3BucketName ]
         Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/kinesis_producer/layer.zip'
+          Fn::Sub: '${QSS3KeyPrefix}assets/layers/kinesis_producer/layer.zip'
       CompatibleRuntimes:
         - python3.9
       LicenseInfo: 'Available under the MIT-0 license.'

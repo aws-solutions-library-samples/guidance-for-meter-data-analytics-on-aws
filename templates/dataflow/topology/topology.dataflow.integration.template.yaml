@@ -93,25 +93,10 @@ Resources:
       Timeout: 240
       Runtime: python3.9
       Role: !GetAtt 'RunLambdaRole.Arn'
-      Layers:
-        - !Ref TopologyDependencyLayer
       Environment:
         Variables:
           staging_data_bucket: !Ref StagingDataBucket
           integrated_data_bucket: !Ref IntegratedDataBucket
-
-  TopologyDependencyLayer:
-    Type: 'AWS::Serverless::LayerVersion'
-    Properties:
-      LayerName: !Sub "topology-transform-lambda-layer-${AWS::Region}"
-      Description: Dependencies for topology transform lambda
-      ContentUri:
-        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
-        Key:
-          Fn::Sub: '${QSS3KeyPrefix}scripts/layers/topology/topology-transformer-layer.zip'
-      CompatibleRuntimes:
-        - python3.9
-      LicenseInfo: 'Available under the MIT-0 license.'
 
   TopologyStateMachine:
     Type: AWS::Serverless::StateMachine
