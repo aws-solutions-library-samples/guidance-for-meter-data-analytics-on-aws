@@ -1,1021 +1,1037 @@
 {
   "dashboard": {
-      "annotations": {
-          "list": [
-            {
-              "builtIn": 1,
-              "datasource": "-- Grafana --",
-              "enable": true,
-              "hide": true,
-              "iconColor": "rgba(0, 211, 255, 1)",
-              "name": "Annotations & Alerts",
-              "target": {
-                "limit": 100,
-                "matchAny": false,
-                "tags": [],
-                "type": "dashboard"
-              },
-              "type": "dashboard"
-            }
-          ]
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "iteration": 1683904269923,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
         },
-        "editable": true,
-        "fiscalYearStartMonth": 0,
-        "graphTooltip": 0,
-        "id": null,
-        "iteration": 1683742812861,
-        "links": [],
-        "liveNow": false,
-        "panels": [
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
             },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "currencyUSD"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 6,
-              "x": 0,
-              "y": 0
-            },
-            "id": 4,
-            "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "mean"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and cast(year(cast(ds as date)) as varchar) = '$year' and anomaly = -1\n",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "Average Dip",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "kwatth"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 8,
-              "x": 6,
-              "y": 0
-            },
-            "id": 9,
-            "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "mean"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and cast(year(cast(ds as date)) as varchar) = '$year' and anomaly = -1\n",
-                "refId": "A"
-              }
-            ],
-            "title": "Average Dip",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "semi-dark-orange",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 3,
-              "x": 14,
-              "y": 0
-            },
-            "id": 6,
-            "options": {
-              "colorMode": "none",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "count"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly= -1 and year(cast(ds as date)) = $year",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "YTD Dips",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "semi-dark-blue",
-                  "mode": "fixed"
-                },
-                "custom": {
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "axisSoftMin": 0,
-                  "fillOpacity": 80,
-                  "gradientMode": "scheme",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "lineWidth": 1,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  }
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "semi-dark-orange",
-                      "value": null
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 7,
-              "x": 17,
-              "y": 0
-            },
-            "id": 8,
-            "options": {
-              "barRadius": 0,
-              "barWidth": 0.97,
-              "groupWidth": 0.7,
-              "legend": {
-                "calcs": [],
-                "displayMode": "hidden",
-                "placement": "bottom"
-              },
-              "orientation": "horizontal",
-              "showValue": "auto",
-              "stacking": "none",
-              "text": {},
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              },
-              "xTickLabelRotation": 0,
-              "xTickLabelSpacing": 0
-            },
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = -1 and meter_id = '$meter_id' \ngroup by 1",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "Which Days are Dips Occurring?",
-            "type": "barchart"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "currencyUSD"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 6,
-              "x": 0,
-              "y": 7
-            },
-            "id": 10,
-            "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "mean"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and cast(year(cast(ds as date)) as varchar) = '$year' and anomaly = 1\n",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "Average Spike",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "kwatth"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 8,
-              "x": 6,
-              "y": 7
-            },
-            "id": 11,
-            "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "mean"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and cast(year(cast(ds as date)) as varchar) = '$year' and anomaly = 1\n",
-                "refId": "A"
-              }
-            ],
-            "title": "Average Spike",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "semi-dark-orange",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 3,
-              "x": 14,
-              "y": 7
-            },
-            "id": 12,
-            "options": {
-              "colorMode": "none",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "count"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "text": {
-                "valueSize": 90
-              },
-              "textMode": "auto"
-            },
-            "pluginVersion": "8.4.7",
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly = 1 and year(cast(ds as date)) = $year",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "YTD Spikes",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "semi-dark-blue",
-                  "mode": "fixed"
-                },
-                "custom": {
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "axisSoftMin": 0,
-                  "fillOpacity": 80,
-                  "gradientMode": "scheme",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "lineWidth": 1,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  }
-                },
-                "decimals": 2,
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "semi-dark-orange",
-                      "value": null
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 7,
-              "x": 17,
-              "y": 7
-            },
-            "id": 13,
-            "options": {
-              "barRadius": 0,
-              "barWidth": 0.97,
-              "groupWidth": 0.7,
-              "legend": {
-                "calcs": [],
-                "displayMode": "hidden",
-                "placement": "bottom"
-              },
-              "orientation": "horizontal",
-              "showValue": "auto",
-              "stacking": "none",
-              "text": {},
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              },
-              "xTickLabelRotation": 0,
-              "xTickLabelSpacing": 0
-            },
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-                "format": 1,
-                "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = 1 and meter_id = '$meter_id' \ngroup by 1",
-                "refId": "A",
-                "table": "meter_anomaly_results"
-              }
-            ],
-            "title": "Which Days are Spikes Occurring?",
-            "type": "barchart"
-          },
-          {
-              "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "bars",
-                  "fillOpacity": 30,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "normal"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "currencyUSD"
-              },
-              "overrides": [
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
                 {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "regular_consumption consumption"
-                  },
-                  "properties": [
-                    {
-                      "id": "displayName",
-                      "value": "Actual"
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "text",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
+                  "color": "green",
+                  "value": null
                 },
                 {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "anomaly_consumption cost"
-                  },
-                  "properties": [
-                    {
-                      "id": "displayName",
-                      "value": "Dip"
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "semi-dark-blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
+                  "color": "red",
+                  "value": 80
                 }
               ]
             },
-            "gridPos": {
-              "h": 10,
-              "w": 24,
-              "x": 0,
-              "y": 14
-            },
-            "id": 2,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom"
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "__default",
-                  "region": "__default"
-                },
-                "format": 1,
-                "hide": false,
-                "rawSQL": "select distinct a.meter_id, aggregated_consumption * 0.11 * 10 as consumption,\ndate_trunc('week', cast(ds as date)) as date\nfrom aggregated_weekly a\njoin anomaly b\non a.meter_id = b.meter_id\nand cast(a.year as int) = year(cast(ds as date))\nand a.month = month(cast(ds as date))\nand cast(a.week_of_year as int) = week(cast(ds as date))\nand a.meter_id = '$meter_id'\norder by 3",
-                "refId": "regular_consumption"
-              },
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "__default",
-                  "region": "__default"
-                },
-                "format": 1,
-                "rawSQL": "select date_trunc('week', cast(ds as date)) as date, sum(consumption * 0.11 * 10) as cost\n\nfrom anomaly\nwhere anomaly = -1\nand meter_id = '$meter_id'\ngroup by 1",
-                "refId": "anomaly_consumption"
-              }
-            ],
-            "title": "Weekly Trend Dips",
-            "type": "timeseries"
+            "unit": "currencyUSD"
           },
-          {
-              "datasource": {
-                  "type": "grafana-athena-datasource",
-                  "uid": "-08SeM84z"
-                },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "bars",
-                  "fillOpacity": 30,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "normal"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "currencyUSD"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "regular_consumption consumption"
-                  },
-                  "properties": [
-                    {
-                      "id": "displayName",
-                      "value": "Actual"
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "text",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "anomaly_consumption cost"
-                  },
-                  "properties": [
-                    {
-                      "id": "displayName",
-                      "value": "Dip"
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "semi-dark-blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 10,
-              "w": 24,
-              "x": 0,
-              "y": 24
-            },
-            "id": 14,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom"
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "__default",
-                  "region": "__default"
-                },
-                "format": 1,
-                "hide": false,
-                "rawSQL": "select distinct a.meter_id, aggregated_consumption * 0.11 * 10 as consumption,\ndate_trunc('week', cast(ds as date)) as date\nfrom aggregated_weekly a\njoin anomaly b\non a.meter_id = b.meter_id\nand cast(a.year as int) = year(cast(ds as date))\nand a.month = month(cast(ds as date))\nand cast(a.week_of_year as int) = week(cast(ds as date))\nand a.meter_id = '$meter_id'\norder by 3",
-                "refId": "regular_consumption"
-              },
-              {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "__default",
-                  "region": "__default"
-                },
-                "format": 1,
-                "rawSQL": "select date_trunc('week', cast(ds as date)) as date, sum(consumption * 0.11 * 10) as cost\n\nfrom anomaly\nwhere anomaly = -1\nand meter_id = '$meter_id'\ngroup by 1",
-                "refId": "anomaly_consumption"
-              }
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "id": 4,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
             ],
-            "title": "Weekly Trend Spikes",
-            "type": "timeseries"
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
+            "refId": "A",
+            "table": "meter_anomaly_results"
           }
         ],
-        "refresh": false,
-        "schemaVersion": 35,
-        "style": "dark",
-        "tags": [],
-        "templating": {
-          "list": [
+        "title": "Average Dip",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "kwatth"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 8,
+          "x": 6,
+          "y": 0
+        },
+        "id": 9,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Average Dip",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "semi-dark-orange",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 3,
+          "x": 14,
+          "y": 0
+        },
+        "id": 6,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "count"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly= -1 and year(cast(ds as date)) = $year",
+            "refId": "A",
+            "table": "meter_anomaly_results"
+          }
+        ],
+        "title": "YTD Dips",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "semi-dark-blue",
+              "mode": "fixed"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "axisSoftMin": 0,
+              "fillOpacity": 80,
+              "gradientMode": "scheme",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "semi-dark-orange",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 7,
+          "x": 17,
+          "y": 0
+        },
+        "id": 8,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "bottom"
+          },
+          "orientation": "horizontal",
+          "showValue": "auto",
+          "stacking": "none",
+          "text": {},
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = -1 and meter_id = '$meter_id' \ngroup by 1",
+            "refId": "A",
+            "table": "meter_anomaly_results"
+          }
+        ],
+        "title": "Which Days are Dips Occurring?",
+        "type": "barchart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "currencyUSD"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 6,
+          "x": 0,
+          "y": 7
+        },
+        "id": 10,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
+            "refId": "A",
+            "table": "meter_anomaly_results"
+          }
+        ],
+        "title": "Average Spike",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "kwatth"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 8,
+          "x": 6,
+          "y": 7
+        },
+        "id": 11,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Average Spike",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "semi-dark-orange",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 3,
+          "x": 14,
+          "y": 7
+        },
+        "id": 12,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "count"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 90
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly = 1 and year(cast(ds as date)) = $year",
+            "refId": "A",
+            "table": "meter_anomaly_results"
+          }
+        ],
+        "title": "YTD Spikes",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "semi-dark-blue",
+              "mode": "fixed"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "axisSoftMin": 0,
+              "fillOpacity": 80,
+              "gradientMode": "scheme",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "semi-dark-orange",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 7,
+          "x": 17,
+          "y": 7
+        },
+        "id": 13,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "bottom"
+          },
+          "orientation": "horizontal",
+          "showValue": "auto",
+          "stacking": "none",
+          "text": {},
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = 1 and meter_id = '$meter_id' \ngroup by 1",
+            "refId": "A",
+            "table": "meter_anomaly_results"
+          }
+        ],
+        "title": "Which Days are Spikes Occurring?",
+        "type": "barchart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "bars",
+              "fillOpacity": 30,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "currencyUSD"
+          },
+          "overrides": [
             {
-              "hide": 2,
-              "name": "CostPerKWh",
-              "query": "0.23",
-              "skipUrlSync": false,
-              "type": "constant"
+              "matcher": {
+                "id": "byName",
+                "options": "regular_consumption consumption"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Actual"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "text",
+                    "mode": "fixed"
+                  }
+                }
+              ]
             },
             {
-              "current": {
-                "selected": false,
-                "text": "3e72b762-f274-3360-9d3f-e98d1c792dee",
-                "value": "3e72b762-f274-3360-9d3f-e98d1c792dee"
+              "matcher": {
+                "id": "byName",
+                "options": "anomaly_consumption cost"
               },
-              "datasource": {
-                "type": "grafana-athena-datasource",
-                "uid": "-08SeM84z"
-              },
-              "definition": "",
-              "hide": 0,
-              "includeAll": false,
-              "multi": false,
-              "name": "meter_id",
-              "options": [],
-              "query": {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Dip"
                 },
-                "format": 1,
-                "rawSQL": "SELECT DISTINCT meter_id from meter_anomaly_results;"
-              },
-              "refresh": 1,
-              "regex": "",
-              "skipUrlSync": false,
-              "sort": 0,
-              "type": "query"
-            },
-            {
-              "current": {
-                "selected": true,
-                "text": "2022",
-                "value": "2022"
-              },
-              "datasource": {
-                "type": "grafana-athena-datasource",
-                "uid": "-08SeM84z"
-              },
-              "definition": "",
-              "hide": 0,
-              "includeAll": false,
-              "multi": false,
-              "name": "year",
-              "options": [],
-              "query": {
-                "connectionArgs": {
-                  "catalog": "__default",
-                  "database": "mda_database_feature_ml",
-                  "region": "__default"
-                },
-                "format": 1,
-                "rawSQL": "SELECT DISTINCT CAST(YEAR(ds) AS VARCHAR) AS year FROM meter_anomaly_results;\n",
-                "table": "meter_anomaly_results"
-              },
-              "refresh": 1,
-              "regex": "",
-              "skipUrlSync": false,
-              "sort": 0,
-              "type": "query"
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "semi-dark-blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
             }
           ]
         },
-        "time": {
-          "from": "now-6h",
-          "to": "now"
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 14
         },
-        "timepicker": {},
-        "timezone": "",
-        "title": "Anomaly Spike and Dip",
-        "uid": "49kiWVU4z",
-        "version": 7,
-        "weekStart": ""
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "SELECT \n    SUM(reading_value) * 0.25 * $CostPerKWh AS consumption, DATE_TRUNC('month',reading_date_time) as month\nFROM\n    mda_database_integrated.meter_readings_integrated_parquet\nWHERE\n    meter_id = '$meter_id' AND reading_type = 'kw' and year = $year\nGROUP BY DATE_TRUNC('month',reading_date_time)\nORDER BY 2\n    \n",
+            "refId": "regular_consumption"
+          },
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "select date_trunc('month', cast(ds as date)) as date, sum(consumption) * $CostPerKWh as cost\nfrom mda_database_feature_ml.meter_anomaly_results \nwhere anomaly = -1 and meter_id = '$meter_id' and year(cast(ds as date)) = $year\ngroup by 1",
+            "refId": "anomaly_consumption"
+          }
+        ],
+        "title": "Monthly Trend Dips",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "bars",
+              "fillOpacity": 30,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "currencyUSD"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "regular_consumption consumption"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Actual"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "text",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "anomaly_consumption cost"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Spike"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "semi-dark-blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 11,
+          "w": 24,
+          "x": 0,
+          "y": 24
+        },
+        "id": 15,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "SELECT \n    SUM(reading_value) * 0.25 * $CostPerKWh AS consumption, DATE_TRUNC('month',reading_date_time) as month\nFROM\n    mda_database_integrated.meter_readings_integrated_parquet\nWHERE\n    meter_id = '$meter_id' AND reading_type = 'kw' and year = $year\nGROUP BY DATE_TRUNC('month',reading_date_time)\nORDER BY 2\n    \n",
+            "refId": "regular_consumption"
+          },
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "select date_trunc('month', cast(ds as date)) as date, sum(consumption) * $CostPerKWh as cost\nfrom mda_database_feature_ml.meter_anomaly_results \nwhere anomaly = 1 and meter_id = '$meter_id' and year(cast(ds as date)) = $year\ngroup by 1",
+            "refId": "anomaly_consumption"
+          }
+        ],
+        "title": "Monthly Trend Spikes",
+        "type": "timeseries"
+      }
+    ],
+    "refresh": false,
+    "schemaVersion": 35,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "hide": 2,
+          "name": "CostPerKWh",
+          "query": "0.23",
+          "skipUrlSync": false,
+          "type": "constant"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": "72ccc662-7573-3fd1-bdd5-4d7c0d206a09",
+            "value": "72ccc662-7573-3fd1-bdd5-4d7c0d206a09"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "definition": "",
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "meter_id",
+          "options": [],
+          "query": {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "format": 1,
+            "rawSQL": "SELECT DISTINCT meter_id from meter_anomaly_results;"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "2022",
+            "value": "2022"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "definition": "",
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "year",
+          "options": [],
+          "query": {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "mda_database_feature_ml",
+              "region": "__default"
+            },
+            "format": 1,
+            "rawSQL": "SELECT DISTINCT CAST(YEAR(ds) AS VARCHAR) AS year FROM meter_anomaly_results;\n",
+            "table": "meter_anomaly_results"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-1y/y",
+      "to": "now-1y/y"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Anomaly Spike and Dip",
+    "uid": "49kiWVU4z",
+    "version": 12,
+    "weekStart": ""
   },
   "message": "Anomaly Dip and Spike Dashboard",
   "overwrite": true
