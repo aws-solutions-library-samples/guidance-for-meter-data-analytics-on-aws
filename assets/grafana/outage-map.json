@@ -283,10 +283,6 @@
           "type": "stat"
         },
         {
-            "datasource": {
-                "type": "grafana-athena-datasource",
-                "uid": "-08SeM84z"
-            },
           "gridPos": {
             "h": 6,
             "w": 6,
@@ -345,7 +341,7 @@
       },
       "timepicker": {},
       "timezone": "",
-      "title": "Outage Map Final",
+      "title": "Outage Map",
       "uid": "aWPyqSU4k",
       "version": 4,
       "weekStart": ""
