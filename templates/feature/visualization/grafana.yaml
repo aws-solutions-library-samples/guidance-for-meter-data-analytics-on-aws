@@ -1,7 +1,66 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Create Grafana Role for accessing Athena. (SO9213)"
+Description: "Launches AWS Managed Grafana - Still needs an admin user assigned | Create Grafana Role for accessing Athena. (qs-1r18anahd)"
+
+Parameters:
+  AthenaQueryBucket:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Athena Query bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Description: >-
+      S3 bucket name to save Athena Query results.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-). The S3 bucket should have the following prefix grafana-athena-query-results- .
+    Type: String
+    Default: "grafana-athena-query-results-account-id"
+  AthenaWorkgroup:
+    Type: String
+    Default: grafana-athena-workgroup
+    Description: Name of the athena workgroup grafana will use to query.
+  S3Bucket:
+    Description: The name of the bucket that contains the packaged source
+    Type: String
+    Default : "mda-data-account-id"
+  S3Key:
+    Description : The name of the ZIP package
+    Type : String
+    Default : "artefacts/assets/lambda/configure_grafana/lambda.zip"
+  S3BucketDashboard:
+    Description: The name of the bucket that contains the dashboards
+    Type: String
+    Default : "mda-data-account-id"
 
 Resources:
+  AmazonGrafanaWorkspaceIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonGrafanaAthenaAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - grafana.amazonaws.com
+            Action:
+              - 'sts:AssumeRole' 
+
+  AmazonGrafanaWorkspace:
+    Type: 'AWS::Grafana::Workspace'
+    Properties:
+      AccountAccessType: CURRENT_ACCOUNT
+      DataSources: 
+        - ATHENA
+      Name: AmazonGrafanaWorkspace
+      Description: Amazon Grafana Workspace
+      AuthenticationProviders:
+        - AWS_SSO
+      PermissionType: CUSTOMER_MANAGED
+      RoleArn: !GetAtt 
+        - AmazonGrafanaWorkspaceIAMRole
+        - Arn
 
   GrafanaAthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
@@ -17,6 +76,57 @@ Resources:
         ResultConfiguration:
           OutputLocation: !Sub 's3://${AthenaQueryBucket}'  
 
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+            Action:
+            - sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSSSODirectoryAdministrator
+        - arn:aws:iam::aws:policy/AWSSSOMasterAccountAdministrator
+        - arn:aws:iam::aws:policy/AWSOrganizationsFullAccess
+        - arn:aws:iam::aws:policy/AWSGrafanaAccountAdministrator
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+
+  GrafanaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !Ref S3Key
+      Handler: 'app.lambda_handler'
+      Runtime: "python3.9"
+      Role: !GetAtt "LambdaExecutionRole.Arn"
+      Timeout: 120
+
+  GrafanaAPI:
+    Type: Custom::GrafanaAPI
+    Properties:
+      ServiceToken: !GetAtt GrafanaFunction.Arn
+      grafanaId: !Ref AmazonGrafanaWorkspace
+      bucket: !Ref S3BucketDashboard
+      workgroup: !Ref AthenaWorkgroup
+    DependsOn: AmazonGrafanaWorkspace
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -31,18 +141,18 @@ Metadata:
       AthenaWorkgroup:
         default: Athena workgroup
 
-Parameters:
-  AthenaQueryBucket:
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    ConstraintDescription: >-
-      Athena Query bucket name can include numbers, lowercase letters, uppercase
-      letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Description: >-
-      S3 bucket name to save Athena Query results.
-      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
-      It cannot start or end with a hyphen (-).
-    Type: String
-  AthenaWorkgroup:
-    Type: String
-    Default: grafana-athena-workgroup
-    Description: Name of the athena workgroup grafana will use to query.
+Outputs:
+  WorkspaceEndpoint:
+    Value: !GetAtt 
+      - AmazonGrafanaWorkspace
+      - Endpoint
+  WorkspaceStatus:
+    Value: !GetAtt 
+      - AmazonGrafanaWorkspace
+      - Status
+  WorkspaceId:
+    Value: !Ref AmazonGrafanaWorkspace
+  GrafanaVersion:
+    Value: !GetAtt 
+      - AmazonGrafanaWorkspace
+      - GrafanaVersion
