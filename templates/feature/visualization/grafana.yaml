@@ -24,7 +24,7 @@ Parameters:
   S3Key:
     Description : The name of the ZIP package
     Type : String
-    Default : "artefacts/assets/lambda/configure_grafana/lambda.zip"
+    Default : "assets/lambda/configure_grafana/lambda.zip"
   S3BucketDashboard:
     Description: The name of the bucket that contains the dashboards
     Type: String
