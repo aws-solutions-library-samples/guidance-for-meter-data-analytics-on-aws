@@ -6,7 +6,7 @@
   "jsonData": {
     "authType": "ec2_iam_role",
     "catalog": "AwsDataCatalog",
-    "database": "grafanadb",
+    "database": "mda_database_integrated",
     "defaultRegion": "us-east-1",
     "provisionedBy": "aws-datasource-provisioner-app",
     "workgroup": "grafana-athena-workgroup"

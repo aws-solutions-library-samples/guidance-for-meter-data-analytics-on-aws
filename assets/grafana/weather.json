@@ -28,6 +28,10 @@
     "liveNow": false,
     "panels": [
       {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
         "gridPos": {
           "h": 4,
           "w": 24,
@@ -46,7 +50,7 @@
             "group": [],
             "metricColumn": "null",
             "rawQuery": false,
-            "rawSql": "SELECT reading_date_time AS \"time\", reading_value FROM meter_readings_integrated_parquet WHERE  $__timeFilter(reading_date_time) ORDER BY 1",
+            "rawSql": "SELECT reading_date_time AS \"time\", reading_value FROM mda_database_integrated.meter_readings_integrated_parquet WHERE  $__timeFilter(reading_date_time) ORDER BY 1",
             "refId": "A",
             "select": [
               [
@@ -177,7 +181,7 @@
             },
             "format": 1,
             "hide": false,
-            "rawSQL": "SELECT reading_value * 0.25 * $CostPerKWh AS yearly_consumption\nFROM meter_readings_integrated_parquet\nWHERE year = $year AND reading_type='kw' AND meter_id = '$meter_id'\n",
+            "rawSQL": "SELECT reading_value * 0.25 * $CostPerKWh AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE year = $year AND reading_type='kw' AND meter_id = '$meter_id'\n",
             "refId": "B"
           }
         ],
@@ -274,7 +278,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year -1 and reading_type='kw'\n",
+            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year -1 and reading_type='kw'\n",
             "refId": "A",
             "table": "meter_readings_integrated_parquet"
           },
@@ -290,7 +294,7 @@
             },
             "format": 1,
             "hide": false,
-            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year and reading_type='kw'\n",
+            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year and reading_type='kw'\n",
             "refId": "B"
           }
         ],
@@ -387,7 +391,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select temperature, time\nfrom weather_data_integrated_weather\nwhere year(time) = $year-1\norder by 2",
+            "rawSQL": "select temperature, time\nfrom mda_database_integrated.weather_data_integrated_weather\nwhere year(time) = $year-1\norder by 2",
             "refId": "A",
             "table": "meter_readings_integrated_parquet"
           },
@@ -403,7 +407,7 @@
             },
             "format": 1,
             "hide": false,
-            "rawSQL": "select temperature, time\nfrom weather_data_integrated_weather\nwhere year(time) = $year\norder by 2",
+            "rawSQL": "select temperature, time\nfrom mda_database_integrated.weather_data_integrated_weather\nwhere year(time) = $year\norder by 2",
             "refId": "B"
           }
         ],
@@ -744,7 +748,7 @@
               "region": "__default"
             },
             "format": 1,
-            "rawSQL": "SELECT DISTINCT meter_id from meter_readings_integrated_parquet;\n",
+            "rawSQL": "SELECT DISTINCT meter_id from mda_database_integrated.meter_readings_integrated_parquet;\n",
             "table": "meter_readings_integrated_parquet"
           },
           "refresh": 1,

@@ -94,7 +94,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
+            "rawSQL": "select consumption * $CostPerKWh * 10 from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -169,7 +169,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
+            "rawSQL": "select consumption from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = -1\n",
             "refId": "A"
           }
         ],
@@ -241,7 +241,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly= -1 and year(cast(ds as date)) = $year",
+            "rawSQL": "select consumption from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly= -1 and year(cast(ds as date)) = $year",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -330,7 +330,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = -1 and meter_id = '$meter_id' \ngroup by 1",
+            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom mda_database_feature_ml.meter_anomaly_results\nwhere anomaly = -1 and meter_id = '$meter_id' \ngroup by 1",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -405,7 +405,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption * $CostPerKWh * 10 from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
+            "rawSQL": "select consumption * $CostPerKWh * 10 from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -480,7 +480,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
+            "rawSQL": "select consumption from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and year(cast(ds as date))  = $year and anomaly = 1\n",
             "refId": "A"
           }
         ],
@@ -552,7 +552,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select consumption from meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly = 1 and year(cast(ds as date)) = $year",
+            "rawSQL": "select consumption from mda_database_feature_ml.meter_anomaly_results \nwhere meter_id = '$meter_id' and anomaly = 1 and year(cast(ds as date)) = $year",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -641,7 +641,7 @@
               "uid": "-08SeM84z"
             },
             "format": 1,
-            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom meter_anomaly_results\nwhere anomaly = 1 and meter_id = '$meter_id' \ngroup by 1",
+            "rawSQL": "select date_format(cast(ds as date), '%a') as day, count(consumption) as count\nfrom mda_database_feature_ml.meter_anomaly_results\nwhere anomaly = 1 and meter_id = '$meter_id' \ngroup by 1",
             "refId": "A",
             "table": "meter_anomaly_results"
           }
@@ -980,7 +980,7 @@
               "region": "__default"
             },
             "format": 1,
-            "rawSQL": "SELECT DISTINCT meter_id from meter_anomaly_results;"
+            "rawSQL": "SELECT DISTINCT meter_id from mda_database_feature_ml.meter_anomaly_results;"
           },
           "refresh": 1,
           "regex": "",
@@ -1011,7 +1011,7 @@
               "region": "__default"
             },
             "format": 1,
-            "rawSQL": "SELECT DISTINCT CAST(YEAR(ds) AS VARCHAR) AS year FROM meter_anomaly_results;\n",
+            "rawSQL": "SELECT DISTINCT CAST(YEAR(ds) AS VARCHAR) AS year FROM mda_database_feature_ml.meter_anomaly_results;\n",
             "table": "meter_anomaly_results"
           },
           "refresh": 1,

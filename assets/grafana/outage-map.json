@@ -85,7 +85,7 @@
                 "uid": "-08SeM84z"
               },
               "format": 1,
-              "rawSQL": "Select count(status)\nFROM \"mda_database_integrated\".\"topology_data_integrated_substation\" \nWHERE status = 'offline'\n",
+              "rawSQL": "Select count(status)\nFROM  mda_database_integrated.topology_data_integrated_substation \nWHERE status = 'offline'\n",
               "refId": "A"
             }
           ],
@@ -275,7 +275,7 @@
                 "uid": "-08SeM84z"
               },
               "format": 1,
-              "rawSQL": "Select count(status)\nFROM \"mda_database_integrated\".\"topology_data_integrated_substation\" \nWHERE status = 'offline'\n",
+              "rawSQL": "Select count(status)\nFROM  mda_database_integrated.topology_data_integrated_substation \nWHERE status = 'offline'\n",
               "refId": "A"
             }
           ],
@@ -283,6 +283,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
           "gridPos": {
             "h": 6,
             "w": 6,
