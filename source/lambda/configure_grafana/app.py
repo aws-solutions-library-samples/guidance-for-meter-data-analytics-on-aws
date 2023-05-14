@@ -55,7 +55,7 @@ def lambda_handler(event, context):
     api_path = "/api/datasources"
     s3 = boto3.resource('s3')
 
-    key = "artefacts/assets/grafana/athena-data-source.json"
+    key = "assets/grafana/athena-data-source.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     ds = json.loads(data)
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
     api_path = "/api/dashboards/db"
 
     # deploy weather dashboard
-    key = "artefacts/assets/grafana/weather.json"
+    key = "assets/grafana/weather.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -99,7 +99,7 @@ def lambda_handler(event, context):
         verify=True)  
     
     # deploy outage map dashboard
-    key = "artefacts/assets/grafana/outage-map.json"
+    key = "assets/grafana/outage-map.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -121,7 +121,7 @@ def lambda_handler(event, context):
         verify=True)
     
     # deploy anomaly spike and dip dashboard
-    key = "artefacts/assets/grafana/anomaly-dip-n-spike.json"
+    key = "assets/grafana/anomaly-dip-n-spike.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -143,7 +143,7 @@ def lambda_handler(event, context):
         verify=True)
     
     # deploy forecast dashboard
-    key = "artefacts/assets/grafana/forecast.json"
+    key = "assets/grafana/forecast.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
