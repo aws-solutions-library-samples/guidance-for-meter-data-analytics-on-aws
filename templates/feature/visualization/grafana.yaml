@@ -67,14 +67,14 @@ Resources:
     Properties:
       Name: !Ref AthenaWorkgroup
       Description: Athena Workgroup for Amazon Grafana
-      RecursiveDeleteOption: false
+      RecursiveDeleteOption: true
       State: ENABLED
       Tags:
         - Key: "GrafanaDataSource"
           Value: "true"
       WorkGroupConfiguration:
         ResultConfiguration:
-          OutputLocation: !Sub 's3://${AthenaQueryBucket}'  
+          OutputLocation: !Sub 's3://${AthenaQueryBucket}'
 
   LambdaExecutionRole:
     Type: "AWS::IAM::Role"
