@@ -1,671 +1,647 @@
 {
     "dashboard": {
-      "annotations": {
-        "list": [
-          {
-            "builtIn": 1,
-            "datasource": "-- Grafana --",
-            "enable": true,
-            "hide": true,
-            "iconColor": "rgba(0, 211, 255, 1)",
-            "name": "Annotations & Alerts",
-            "target": {
-              "limit": 100,
-              "matchAny": false,
-              "tags": [],
-              "type": "dashboard"
-            },
-            "type": "dashboard"
-          }
-        ]
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 1684049752279,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
       },
-      "editable": true,
-      "fiscalYearStartMonth": 0,
-      "graphTooltip": 0,
-      "id": null,
-      "iteration": 1683880123542,
-      "links": [],
-      "liveNow": false,
-      "panels": [
+      "id": 2,
+      "options": {
+        "content": "<center> <h1> Welcome John Smith </h1> </center>\n  \n<center> Your forecast for the next week </center>",
+        "mode": "markdown"
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
         {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 24,
-            "x": 0,
-            "y": 0
-          },
-          "id": 2,
-          "options": {
-            "content": "<center> <h1> Welcome John Smith </h1> </center>\n  \n<center> Your forecast for the next week </center>",
-            "mode": "markdown"
-          },
-          "pluginVersion": "8.4.7",
-          "targets": [
-            {
-              "format": "time_series",
-              "group": [],
-              "metricColumn": "none",
-              "rawQuery": false,
-              "rawSql": "SELECT\n  reading_date_time AS \"time\",\n  reading_value\nFROM daily\nWHERE\n  $__timeFilter(reading_date_time)\nORDER BY 1",
-              "refId": "A",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "reading_value"
-                    ],
-                    "type": "column"
-                  }
-                ]
-              ],
-              "table": "daily",
-              "timeColumn": "reading_date_time",
-              "timeColumnType": "timestamp",
-              "where": [
-                {
-                  "name": "$__timeFilter",
-                  "params": [],
-                  "type": "macro"
-                }
-              ]
-            }
-          ],
-          "type": "text"
-        },
-        {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "decimals": 2,
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              },
-              "unit": "currencyUSD"
-            },
-            "overrides": [
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": false,
+          "rawSql": "SELECT\n  reading_date_time AS \"time\",\n  reading_value\nFROM daily\nWHERE\n  $__timeFilter(reading_date_time)\nORDER BY 1",
+          "refId": "A",
+          "select": [
+            [
               {
-                "matcher": {
-                  "id": "byFrameRefID",
-                  "options": "A"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "currencyUSD"
-                  }
-                ]
+                "params": [
+                  "reading_value"
+                ],
+                "type": "column"
               }
             ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 8,
-            "x": 0,
-            "y": 3
-          },
-          "id": 4,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "mean"
-              ],
-              "fields": "/^Reading$/",
-              "values": false
-            },
-            "text": {},
-            "textMode": "auto"
-          },
-          "pluginVersion": "8.4.7",
-          "targets": [
-            {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "__default",
-                "region": "__default"
-              },
-              "datasource": {
-                "type": "grafana-athena-datasource",
-                "uid": "-08SeM84z"
-              },
-              "format": 1,
-              "rawSQL": "SELECT AVG(average_weekly_consumption) AS overall_average\nFROM (\n  SELECT\n  AVG(reading_value)* $CostPerKWh * 10 AS average_weekly_consumption\nFROM\n  mda_database_integrated.meter_readings_integrated_parquet\nWHERE\n  reading_type = 'kw' and meter_id = '$meter_id' and year = $year\nGROUP BY\n  WEEK(reading_date_time)\n) AS subquery",
-              "refId": "A",
-              "table": "meter_readings_integrated_parquet"
-            }
           ],
-          "title": "Average Weekly Cost for ${meter_id} in ${year}",
-          "transformations": [
+          "table": "daily",
+          "timeColumn": "reading_date_time",
+          "timeColumnType": "timestamp",
+          "where": [
             {
-              "id": "filterByRefId",
-              "options": {
-                "include": "Average Weekly Cost"
-              }
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
             }
-          ],
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-        },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "yellow",
-                    "value": null
-                  }
-                ]
-              },
-              "unit": "currencyUSD"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 8,
-            "x": 8,
-            "y": 3
-          },
-          "id": 10,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "sum"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "auto"
-          },
-          "pluginVersion": "8.4.7",
-          "targets": [
-            {
-              "panelId": 4,
-              "refId": "A"
-            }
-          ],
-          "title": "Forecast Weekly Cost for $meter_id",
-          "transformations": [
-            {
-              "id": "filterByRefId",
-              "options": {
-                "include": "Forecast Weekly Cost"
-              }
-            }
-          ],
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "super-light-green",
-                    "value": null
-                  },
-                  {
-                    "color": "super-light-red",
-                    "value": 0
-                  }
-                ]
-              },
-              "unit": "percentunit"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 8,
-            "x": 16,
-            "y": 3
-          },
-          "id": 12,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "/^Percent Change$/",
-              "values": true
-            },
-            "text": {
-              "valueSize": 80
-            },
-            "textMode": "auto"
-          },
-          "pluginVersion": "8.4.7",
-          "targets": [
-            {
-              "panelId": 4,
-              "refId": "A"
-            }
-          ],
-          "title": "Forecasted % Change",
-          "transformations": [
-            {
-              "id": "reduce",
-              "options": {
-                "includeTimeField": false,
-                "mode": "reduceFields",
-                "reducers": [
-                  "mean",
-                  "sum"
-                ]
-              }
-            },
-            {
-              "id": "concatenate",
-              "options": {}
-            },
-            {
-              "id": "calculateField",
-              "options": {
-                "alias": "Difference",
-                "binary": {
-                  "left": "Forecast Weekly Cost · amount Total",
-                  "operator": "-",
-                  "reducer": "sum",
-                  "right": "Average Weekly Cost · Reading Mean"
-                },
-                "mode": "binary",
-                "reduce": {
-                  "reducer": "sum"
-                }
-              }
-            },
-            {
-              "id": "calculateField",
-              "options": {
-                "alias": "Percent Change",
-                "binary": {
-                  "left": "Difference",
-                  "operator": "/",
-                  "reducer": "sum",
-                  "right": "Average Weekly Cost · Reading Mean"
-                },
-                "mode": "binary",
-                "reduce": {
-                  "reducer": "sum"
-                }
-              }
-            },
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {
-                  "names": [
-                    "Percent Change"
-                  ]
-                }
-              }
-            }
-          ],
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-        },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "bars",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "stepBefore",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "currencyUSD"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "B forecast amount"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "yellow",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 11,
-            "w": 12,
-            "x": 0,
-            "y": 9
-          },
-          "id": 6,
-          "maxDataPoints": 490,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.2.2",
-          "targets": [
-            {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "__default",
-                "region": "__default"
-              },
-              "format": 1,
-              "rawSQL": "SELECT date_trunc('day', reading_date_time) date, sum(reading_value * 10 * $CostPerKWh) amount\nFROM daily\nWHERE METER_ID='$meter_id' and $__dateFilter(reading_date_time)\nand reading_date_time < date '2014-01-01'\ngroup by 1\norder by 1",
-              "refId": "Actual"
-            },
-            {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "__default",
-                "region": "__default"
-              },
-              "format": 1,
-              "hide": false,
-              "rawSQL": "select date_trunc('day', cast(datetime as timestamp)) as date,\n  -- sum(consumption) * $CostPerKWh * 10 as amount\n  sum(consumption) as amount\nfrom forecast\nwhere meter_id = '$meter_id'\ngroup by 1\norder by 1",
-              "refId": "Forecast"
-            }
-          ],
-          "title": "Daily Costs",
-          "transformations": [],
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "grafana-athena-datasource",
-            "uid": "-08SeM84z"
-        },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "kWh Usage (Average)",
-                "axisPlacement": "auto",
-                "axisSoftMin": 0,
-                "fillOpacity": 80,
-                "gradientMode": "opacity",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineWidth": 1,
-                "scaleDistribution": {
-                  "type": "linear"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "forecast_avg"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "#F2CC0C",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 11,
-            "w": 12,
-            "x": 12,
-            "y": 9
-          },
-          "id": 8,
-          "options": {
-            "barRadius": 0,
-            "barWidth": 0.97,
-            "groupWidth": 0.7,
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "orientation": "auto",
-            "showValue": "auto",
-            "stacking": "none",
-            "text": {},
-            "tooltip": {
-              "mode": "single",
-              "sort": "none"
-            },
-            "xTickLabelRotation": 0,
-            "xTickLabelSpacing": 0
-          },
-          "pluginVersion": "8.2.5",
-          "targets": [
-            {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "__default",
-                "region": "__default"
-              },
-              "format": 0,
-              "rawSQL": "select actual_avg as \"Actual Average\", forecast_avg as \"Forecast Average\",\n  cast(a.hour as varchar) from\n  (select hour(reading_date_time) as Hour,\n  sum(reading_value) as actual_avg,\n  date_format(reading_date_time, '%v') as week\nfrom daily\nwhere METER_ID='$meter_id' AND date_format(reading_date_time, '%W') = '$day_of_week'\nAND date_format(reading_date_time, '%Y') = '$year'\ngroup by 3,1\norder by 1) a\njoin (\nselect hour(cast(datetime as timestamp)) as Hour,\nsum(consumption) as forecast_avg,\ndate_format(cast(datetime as timestamp), '%v') as week\nfrom forecast\nwhere METER_ID='$meter_id' AND date_format(cast(datetime as timestamp), '%W') = '$day_of_week'\ngroup by 3,1\norder by 1) b\non a.hour = b.hour\nand a.week = b.week\norder by a.hour",
-              "refId": "A"
-            }
-          ],
-          "title": "Average Forecast vs. Average Hourly Usage for $day_of_week ",
-          "type": "barchart"
+          ]
         }
       ],
-      "schemaVersion": 35,
-      "style": "dark",
-      "tags": [],
-      "templating": {
-        "list": [
-          {
-            "current": {
-              "selected": false,
-              "text": "503d4c60-3ff0-3d2b-9ea0-6fb5b0078031",
-              "value": "503d4c60-3ff0-3d2b-9ea0-6fb5b0078031"
-            },
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "definition": "",
-            "hide": 0,
-            "includeAll": false,
-            "multi": false,
-            "name": "meter_id",
-            "options": [],
-            "query": {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "mda_database_feature_ml",
-                "region": "__default"
-              },
-              "format": 1,
-              "rawSQL": "select DISTINCT meter_id\nFROM meter_forecast_results;",
-              "table": "meter_forecast_results"
-            },
-            "refresh": 1,
-            "regex": "",
-            "skipUrlSync": false,
-            "sort": 0,
-            "type": "query"
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-athena-datasource",
+        "uid": "-08SeM84z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
           },
-          {
-            "current": {
-              "selected": true,
-              "text": "2022",
-              "value": "2022"
-            },
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "-08SeM84z"
-            },
-            "definition": "",
-            "error": {
-              "message": "error querying the database: SYNTAX_ERROR: line 1:27: Column 'ds' cannot be resolved",
-              "refId": "A"
-            },
-            "hide": 0,
-            "includeAll": false,
-            "multi": false,
-            "name": "year",
-            "options": [],
-            "query": {
-              "connectionArgs": {
-                "catalog": "__default",
-                "database": "mda_database_feature_ml",
-                "region": "__default"
-              },
-              "format": 1,
-              "rawSQL": "SELECT DISTINCT CAST(YEAR(ds) AS VARCHAR) AS year FROM meter_forecast_results;",
-              "table": "meter_forecast_results"
-            },
-            "refresh": 1,
-            "regex": "",
-            "skipUrlSync": false,
-            "sort": 0,
-            "type": "query"
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
+          "unit": "currencyUSD"
+        },
+        "overrides": [
           {
-            "hide": 2,
-            "name": "CostPerKWh",
-            "query": "0.23",
-            "skipUrlSync": false,
-            "type": "constant"
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
           }
         ]
       },
-      "time": {
-        "from": "now-6h",
-        "to": "now"
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 3
       },
-      "timepicker": {},
-      "timezone": "",
-      "title": "Forecast",
-      "uid": "2ipDSV84k",
-      "version": 2,
-      "weekStart": ""
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "rawSQL": "SELECT AVG(weekly_consumption)\nFROM\n(\n    SELECT SUM(t.reading_value) * 0.25 * $CostPerKWh AS weekly_consumption\n    FROM meter_readings_integrated_parquet as t\n    WHERE\n    meter_id = '$meter_id' AND reading_type = 'kw'\n    GROUP BY DATE_TRUNC('week', t.reading_date_time)\n) as inner_query",
+          "refId": "A",
+          "table": "meter_readings_integrated_parquet"
+        }
+      ],
+      "title": "Average Weekly Cost",
+      "transformations": [],
+      "type": "stat"
     },
+    {
+      "datasource": {
+        "type": "grafana-athena-datasource",
+        "uid": "-08SeM84z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 3
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "rawSQL": "SELECT reduce(mean, 0, (s, mean) -> s + mean, s -> s) * $CostPerKWh\nFROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id' and year(forecast_start) = $year",
+          "refId": "A"
+        }
+      ],
+      "title": "Forecast Weekly Cost",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-athena-datasource",
+        "uid": "-08SeM84z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "super-light-green",
+                "value": null
+              },
+              {
+                "color": "super-light-red",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 3
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^difference$/",
+          "limit": 1,
+          "values": true
+        },
+        "text": {
+          "valueSize": 80
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 0,
+          "hide": false,
+          "rawSQL": "SELECT (q1.forecasted_cost-q2.actual_cost)/(q2.actual_cost)*100 as difference\nFROM\n(\n    SELECT reduce(mean, 0, (s, mean) -> s + mean, s -> s) * $CostPerKWh AS forecasted_cost\n    FROM mda_database_feature_ml.meter_forecast_results\n    WHERE meter_id = '$meter_id' AND YEAR(forecast_start) = $year\n) AS q1\nCROSS JOIN\n(\n    SELECT AVG(weekly_consumption) AS actual_cost\n    FROM\n    (\n        SELECT SUM(t.reading_value) * 0.25 * $CostPerKWh AS weekly_consumption \n        FROM mda_database_integrated.meter_readings_integrated_parquet AS t\n        WHERE meter_id = '$meter_id' \n          AND reading_type = 'kw' \n          AND YEAR(t.reading_date_time) = $year\n        GROUP BY DATE_TRUNC('week', t.reading_date_time)\n    ) AS inner_query\n) AS q2;\n",
+          "refId": "B"
+        }
+      ],
+      "title": "Forecasted % Change",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-athena-datasource",
+        "uid": "-08SeM84z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "B forecast amount"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 6,
+      "maxDataPoints": 490,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "rawSQL": "SELECT  reduce(slice(mean, 1, 24), 0, (s, a) -> s + a, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',forecast_start) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 25, 24), 0, (s, b) -> s + b, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 1, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 49, 24), 0, (s, c) -> s + c, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 2, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 73, 24), 0, (s, d) -> s + d, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 3, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 97, 24), 0, (s, e) -> s + e, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 4, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 121, 24), 0, (s, f) -> s + f, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 5, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'\nUNION\nSELECT  reduce(slice(mean, 145, 24), 0, (s, g) -> s + g, s -> s) * $CostPerKWh as day, DATE_TRUNC('day',DATE_ADD('day', 6, forecast_start)) FROM mda_database_feature_ml.meter_forecast_results\nWHERE meter_id = '$meter_id'",
+          "refId": "A"
+        },
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "mda_database_feature_ml",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "hide": false,
+          "rawSQL": "SELECT \n    SUM(reading_value) * 0.25 * $CostPerKWh AS consumption, DATE_TRUNC('day',reading_date_time) as month\nFROM\n    mda_database_integrated.meter_readings_integrated_parquet\nWHERE\n    meter_id = '$meter_id' AND reading_type = 'kw' and year = $year\nGROUP BY DATE_TRUNC('day',reading_date_time)\nORDER BY 2\n\n    \n",
+          "refId": "B"
+        }
+      ],
+      "title": "Daily Costs",
+      "transformations": [],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-athena-datasource",
+        "uid": "-08SeM84z"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisGridShow": true,
+            "axisLabel": "Consumption",
+            "axisPlacement": "left",
+            "axisSoftMin": 0,
+            "fillOpacity": 80,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forecasted_usage _col0"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Forecasted Average Hourly Usage"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hourly_consumption average_consumption"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Average Hourly Usage"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 8,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.71,
+        "groupWidth": 0.58,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "text": {},
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 90,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "8.2.5",
+      "targets": [
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "mda_database_feature_ml",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "rawSQL": "SELECT (mean[1]+mean[1*24+1]+mean[2*24+1]+mean[3*24+1]+mean[4*24+1]+mean[5*24+1]+mean[6*24+1])/7, forecast_start\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[2]+mean[1*24+2]+mean[2*24+2]+mean[3*24+2]+mean[4*24+2]+mean[5*24+2]+mean[6*24+2])/7, date_add('hour', 1, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[3]+mean[1*24+3]+mean[2*24+3]+mean[3*24+3]+mean[4*24+3]+mean[5*24+3]+mean[6*24+3])/7, date_add('hour', 2, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[4]+mean[1*24+4]+mean[2*24+4]+mean[3*24+4]+mean[4*24+4]+mean[5*24+4]+mean[6*24+4])/7, date_add('hour', 3, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[5]+mean[1*24+5]+mean[2*24+5]+mean[3*24+5]+mean[4*24+5]+mean[5*24+5]+mean[6*24+5])/7, date_add('hour', 4, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[6]+mean[1*24+6]+mean[2*24+6]+mean[3*24+6]+mean[4*24+6]+mean[5*24+6]+mean[6*24+6])/7, date_add('hour', 5, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[7]+mean[1*24+7]+mean[2*24+7]+mean[3*24+7]+mean[4*24+7]+mean[5*24+7]+mean[6*24+7])/7, date_add('hour', 6, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[8]+mean[1*24+8]+mean[2*24+8]+mean[3*24+8]+mean[4*24+8]+mean[5*24+8]+mean[6*24+8])/7, date_add('hour', 7, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[9]+mean[1*24+9]+mean[2*24+9]+mean[3*24+9]+mean[4*24+9]+mean[5*24+9]+mean[6*24+9])/7, date_add('hour', 8, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[10]+mean[1*24+10]+mean[2*24+10]+mean[3*24+10]+mean[4*24+10]+mean[5*24+10]+mean[6*24+10])/7, date_add('hour', 9, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[11]+mean[1*24+11]+mean[2*24+11]+mean[3*24+11]+mean[4*24+11]+mean[5*24+11]+mean[6*24+11])/7, date_add('hour', 10, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[12]+mean[1*24+12]+mean[2*24+12]+mean[3*24+12]+mean[4*24+12]+mean[5*24+12]+mean[6*24+12])/7, date_add('hour', 11, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[13]+mean[1*24+13]+mean[2*24+13]+mean[3*24+13]+mean[4*24+13]+mean[5*24+13]+mean[6*24+13])/7, date_add('hour', 12, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[14]+mean[1*24+14]+mean[2*24+14]+mean[3*24+14]+mean[4*24+14]+mean[5*24+14]+mean[6*24+14])/7, date_add('hour', 13, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[15]+mean[1*24+15]+mean[2*24+15]+mean[3*24+15]+mean[4*24+15]+mean[5*24+15]+mean[6*24+15])/7, date_add('hour', 14, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[16]+mean[1*24+16]+mean[2*24+16]+mean[3*24+16]+mean[4*24+16]+mean[5*24+16]+mean[6*24+16])/7, date_add('hour', 15, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[17]+mean[1*24+17]+mean[2*24+17]+mean[3*24+17]+mean[4*24+17]+mean[5*24+17]+mean[6*24+17])/7, date_add('hour', 16, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[18]+mean[1*24+18]+mean[2*24+18]+mean[3*24+18]+mean[4*24+18]+mean[5*24+18]+mean[6*24+18])/7, date_add('hour', 17, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[19]+mean[1*24+19]+mean[2*24+19]+mean[3*24+19]+mean[4*24+19]+mean[5*24+19]+mean[6*24+19])/7, date_add('hour', 18, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[20]+mean[1*24+20]+mean[2*24+20]+mean[3*24+20]+mean[4*24+20]+mean[5*24+20]+mean[6*24+20])/7, date_add('hour', 19, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[21]+mean[1*24+21]+mean[2*24+21]+mean[3*24+21]+mean[4*24+21]+mean[5*24+21]+mean[6*24+21])/7, date_add('hour', 20, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[22]+mean[1*24+22]+mean[2*24+22]+mean[3*24+22]+mean[4*24+22]+mean[5*24+22]+mean[6*24+22])/7, date_add('hour', 21, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[23]+mean[1*24+23]+mean[2*24+23]+mean[3*24+23]+mean[4*24+23]+mean[5*24+23]+mean[6*24+23])/7, date_add('hour', 22, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\nUNION\n\nSELECT (mean[24]+mean[1*24+24]+mean[2*24+24]+mean[3*24+24]+mean[4*24+24]+mean[5*24+24]+mean[6*24+24])/7, date_add('hour', 23, forecast_start)\nFROM meter_forecast_results\nWHERE meter_id = '$meter_id'\n\n\n\n",
+          "refId": "forecasted_usage",
+          "table": "meter_forecast_results"
+        },
+        {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "format": 1,
+          "hide": false,
+          "rawSQL": "SELECT average_consumption, forecast_hour\nFROM (\n  SELECT hour AS hour_start, AVG(reading_value) AS average_consumption\n  FROM mda_database_integrated.meter_readings_integrated_parquet\n  WHERE reading_type = 'kw' AND meter_id = '$meter_id'\n  GROUP BY hour\n  ORDER BY hour_start\n) AS readings\nJOIN (\n  SELECT date_add('hour', hour, forecast_start) AS forecast_hour\n  FROM (\n    SELECT 0 AS hour\n    UNION ALL SELECT 1\n    UNION ALL SELECT 2\n    UNION ALL SELECT 3\n    UNION ALL SELECT 4\n    UNION ALL SELECT 5\n    UNION ALL SELECT 6\n    UNION ALL SELECT 7\n    UNION ALL SELECT 8\n    UNION ALL SELECT 9\n    UNION ALL SELECT 10\n    UNION ALL SELECT 11\n    UNION ALL SELECT 12\n    UNION ALL SELECT 13\n    UNION ALL SELECT 14\n    UNION ALL SELECT 15\n    UNION ALL SELECT 16\n    UNION ALL SELECT 17\n    UNION ALL SELECT 18\n    UNION ALL SELECT 19\n    UNION ALL SELECT 20\n    UNION ALL SELECT 21\n    UNION ALL SELECT 22\n    UNION ALL SELECT 23\n  ) AS hours\n  CROSS JOIN mda_database_feature_ml.meter_forecast_results\n  WHERE meter_id = '$meter_id'\n) AS forecast ON EXTRACT(HOUR FROM forecast_hour) = hour_start;\n",
+          "refId": "hourly_consumption"
+        }
+      ],
+      "title": "Average Forecast vs. Average Hourly Usage",
+      "transformations": [],
+      "type": "barchart"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "503d4c60-3ff0-3d2b-9ea0-6fb5b0078031",
+          "value": "503d4c60-3ff0-3d2b-9ea0-6fb5b0078031"
+        },
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "meter_id",
+        "options": [],
+        "query": {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "mda_database_feature_ml",
+            "region": "__default"
+          },
+          "format": 1,
+          "rawSQL": "select DISTINCT meter_id\nFROM meter_forecast_results;",
+          "table": "meter_forecast_results"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "2023",
+          "value": "2023"
+        },
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "year",
+        "options": [],
+        "query": {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "mda_database_feature_ml",
+            "region": "__default"
+          },
+          "format": 1,
+          "rawSQL": "SELECT DISTINCT CAST(YEAR(forecast_start) AS VARCHAR) AS year FROM mda_database_feature_ml.meter_forecast_results;",
+          "table": "meter_forecast_results"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "hide": 2,
+        "name": "CostPerKWh",
+        "query": "0.23",
+        "skipUrlSync": false,
+        "type": "constant"
+      }
+    ]
+  },
+  "time": {
+    "from": "now/y",
+    "to": "now/y"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Forecast",
+  "uid": "2ipDSV84k",
+  "version": 9,
+  "weekStart": ""
+},
     "message": "Forecast Dashboard",
     "overwrite": true
   }
