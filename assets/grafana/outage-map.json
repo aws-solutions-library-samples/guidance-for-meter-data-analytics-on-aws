@@ -64,9 +64,9 @@
             "orientation": "auto",
             "reduceOptions": {
               "calcs": [
-                "lastNotNull"
+                "count"
               ],
-              "fields": "",
+              "fields": "/.*/",
               "values": false
             },
             "text": {},
@@ -85,7 +85,7 @@
                 "uid": "-08SeM84z"
               },
               "format": 1,
-              "rawSQL": "Select count(status)\nFROM  mda_database_integrated.topology_data_integrated_substation \nWHERE status = 'offline'\n",
+              "rawSQL": "SELECT id\nFROM mda_database_integrated.topology_data_integrated_smart_meter\nLIMIT 50",
               "refId": "A"
             }
           ],
@@ -186,10 +186,10 @@
               }
             ],
             "view": {
-              "id": "north-america",
-              "lat": 40,
-              "lon": -100,
-              "zoom": 4
+              "id": "coords",
+              "lat": 47.717357,
+              "lon": -122.327797,
+              "zoom": 12.35
             }
           },
           "pluginVersion": "8.4.7",
@@ -205,7 +205,7 @@
                 "uid": "-08SeM84z"
               },
               "format": 1,
-              "rawSQL": "select b.latitude, b.longitude, a.name, b.locationtype, a.status\nfrom mda_database_integrated.topology_data_integrated_substation as a\njoin mda_database_integrated.topology_data_integrated_location as b on a.locationid = b.id\nwhere a.status='offline'\n",
+              "rawSQL": "select b.latitude, b.longitude, b.locationtype, a.id\nfrom mda_database_integrated.topology_data_integrated_smart_meter as a\njoin mda_database_integrated.topology_data_integrated_location as b on a.locationid = b.id\nLIMIT 50\n",
               "refId": "A"
             }
           ],
@@ -254,9 +254,9 @@
             "orientation": "auto",
             "reduceOptions": {
               "calcs": [
-                "lastNotNull"
+                "count"
               ],
-              "fields": "",
+              "fields": "/.*/",
               "values": false
             },
             "text": {},
@@ -275,11 +275,11 @@
                 "uid": "-08SeM84z"
               },
               "format": 1,
-              "rawSQL": "Select count(status)\nFROM  mda_database_integrated.topology_data_integrated_substation \nWHERE status = 'offline'\n",
+              "rawSQL": "SELECT id\nFROM mda_database_integrated.topology_data_integrated_smart_meter\nLIMIT 50",
               "refId": "A"
             }
           ],
-          "title": "Impacted Substations",
+          "title": "Impacted Meters",
           "type": "stat"
         },
         {
