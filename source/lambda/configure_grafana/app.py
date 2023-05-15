@@ -38,7 +38,7 @@ def lambda_handler(event, context):
     bucket = event["ResourceProperties"]["bucket"]
     athena_workgroup = event["ResourceProperties"]["workgroup"]
     grafana_workspace = "https://" + str(grafana_id) + ".grafana-workspace.us-east-1.amazonaws.com"
-    data_path = ""
+    data_path = "artefacts/assets/grafana/"
     # create API key
     key_name = 'Admin-' + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
     response = client.create_workspace_api_key(keyName=key_name, keyRole='ADMIN', secondsToLive=4000, workspaceId=str(grafana_id))
@@ -55,7 +55,7 @@ def lambda_handler(event, context):
     api_path = "/api/datasources"
     s3 = boto3.resource('s3')
 
-    key = "assets/grafana/athena-data-source.json"
+    key = data_path + "athena-data-source.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     ds = json.loads(data)
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
     api_path = "/api/dashboards/db"
 
     # deploy weather dashboard
-    key = "assets/grafana/weather.json"
+    key = data_path + "weather.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -99,7 +99,7 @@ def lambda_handler(event, context):
         verify=True)  
     
     # deploy outage map dashboard
-    key = "assets/grafana/outage-map.json"
+    key = data_path + "outage-map.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -121,7 +121,7 @@ def lambda_handler(event, context):
         verify=True)
     
     # deploy anomaly spike and dip dashboard
-    key = "assets/grafana/anomaly-dip-n-spike.json"
+    key = data_path + "anomaly-dip-n-spike.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
@@ -143,7 +143,7 @@ def lambda_handler(event, context):
         verify=True)
     
     # deploy forecast dashboard
-    key = "assets/grafana/forecast.json"
+    key = data_path + "forecast.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
