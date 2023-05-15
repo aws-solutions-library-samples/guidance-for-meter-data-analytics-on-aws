@@ -172,6 +172,20 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
+  GrafanaStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/visualization/grafana.yaml'
+          - S3Region:
+              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+            S3Bucket:
+              !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        AthenaWorkgroup: !Ref AthenaWorkgroup
+
+
 Outputs:
   StackName:
     Description: Stack name.
@@ -248,6 +262,10 @@ Parameters:
       the template. Changing the prefix updates code references to point to
       a new location.
     Type: String
+  AthenaWorkgroup:
+    Description: Athena Workgroup
+    Type: String
+    Default: "grafana-workgroup"
 
 
 Metadata:
