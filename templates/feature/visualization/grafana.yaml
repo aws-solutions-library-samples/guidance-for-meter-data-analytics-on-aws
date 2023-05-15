@@ -18,7 +18,6 @@ Resources:
     Properties:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonGrafanaAthenaAccess'
-        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -28,6 +27,26 @@ Resources:
                 - grafana.amazonaws.com
             Action:
               - 'sts:AssumeRole' 
+      Policies:
+        - PolicyName: S3ReadWriteAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketLocation'
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListMultipartUploadParts'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:CreateBucket'
+                  - 's3:PutObject'
+                  - 's3:PutBucketPublicAccessBlock'
+                Resource: 
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
+
 
   AmazonGrafanaWorkspace:
     Type: 'AWS::Grafana::Workspace'
@@ -81,12 +100,34 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSSSODirectoryAdministrator
-        - arn:aws:iam::aws:policy/AWSSSOMasterAccountAdministrator
-        - arn:aws:iam::aws:policy/AWSOrganizationsFullAccess
-        - arn:aws:iam::aws:policy/AWSGrafanaAccountAdministrator
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource: 
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource: 
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
+              - Effect: Allow
+                Action:
+                  - 'grafana:DescribeWorkspace'
+                  - 'grafana:ListWorkspaces'
+                  - 'grafana:CreateWorkspaceApiKey'
+                Resource: 
+                  - 'arn:aws:grafana:*:*:/workspaces/*'
+              - Effect: Allow
+                Action:
+                  - 'grafana:ListWorkspaces'
+                Resource: 
+                  - '*'
+
+
 
 
   GrafanaFunction:
