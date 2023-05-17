@@ -66,7 +66,7 @@ def lambda_handler(event, context):
     ds = json.loads(data)
 
     ds['jsonData']['workgroup'] = athena_workgroup
-    ds['jsonData']['workgroup'] = region
+    ds['jsonData']['defaultRegion'] = region
 
     requests.post(
         url=grafana_workspace + api_path,
