@@ -7,6 +7,15 @@ Parameters:
     Type: String
     Default: grafana-athena-workgroup
     Description: Name of the athena workgroup grafana will use to query.
+  GrafanaDashboardAuthenticationProvider:
+    Type: String
+    AllowedValues:
+      - AWS_SSO
+      - SAML
+    Default: AWS_SSO
+    Description:
+      The grafana authentication provider can either be AWS IAM Identity Center (Successor to AWS Single Sign-On) or SAML.
+      Both will require additional manual steps. Please consult the documentation BEFORE deploying the MDA solution.
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -81,7 +90,7 @@ Resources:
       Name: AmazonGrafanaWorkspace
       Description: Amazon Grafana Workspace
       AuthenticationProviders:
-        - AWS_SSO
+        - !Ref GrafanaDashboardAuthenticationProvider
       PermissionType: CUSTOMER_MANAGED
       RoleArn: !GetAtt
         - AmazonGrafanaWorkspaceIAMRole
@@ -179,6 +188,7 @@ Metadata:
           default: 'Grafana configuration'
         Parameters:
           - AthenaWorkgroup
+          - GrafanaDashboardAuthenticationProvider
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -187,6 +197,8 @@ Metadata:
     ParameterLabels:
       AthenaWorkgroup:
         default: Athena Workgroup
+      GrafanaDashboardAuthenticationProvider:
+        default: Grafana authentication provider
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:

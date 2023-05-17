@@ -4,199 +4,202 @@ Description: "Workload template to deploy the AWS Quick Start for the Utility Me
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
   DeployMeterGeneratorAndHesSimulator: !Equals [ !Ref MeterDataGenerator, 'ENABLED' ]
+  DeployGrafanaDashboard: !Equals [ !Ref GrafanaDashboard, 'ENABLED' ]
 
 Resources:
-  CopyGlueScriptsStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/util/copy.scripts.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-
-  MeterDataGeneratorStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Condition: DeployMeterGeneratorAndHesSimulator
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/simulator/headend.system.simulator.main.yaml'
-        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
-      Parameters:
-        GenerationState: 'ENABLED'
-        GenerationInterval: !Ref GenerationInterval
-        TotalDevices: !Ref TotalDevices
-        RegionalVoltage: 220
-        LateArrivalSimulate: 'DISABLED'
-        LateArrivalPercent: 10
-        LateArrivalMinuteOffset: 1440
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-
-  IntegrationStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/integration.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-
-  DataStorageStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/datastorage/datastorage.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-
-  MeterreadingsDataflowStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
-        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
-        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
-        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        IntegrationBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
-        DemoMode: !Ref DemoMode
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-
-  HesAdapterStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Condition: DeployMeterGeneratorAndHesSimulator
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/hes.adapter.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        OrchestratorState: "ENABLED"
-        OrchestratorInterval: !Ref GenerationInterval
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        SFTPServerAddress: !GetAtt MeterDataGeneratorStack.Outputs.SftpServerAddress
-        SFTPUserName: !GetAtt MeterDataGeneratorStack.Outputs.SftpUserName
-        SFTPSecretARN: !GetAtt MeterDataGeneratorStack.Outputs.SecretARN
-        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.ApiGatewayInvokeURL
-        InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
-
-  WeatherDataflowStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
-        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
-        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
-        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-
-  TopologyDataflowStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
-        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
-        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
-        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-
-  VoltVarFeatureStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/voltvar/voltvar.feature.template.yaml'
-        - S3Region:
-            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-          S3Bucket:
-            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
-        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-
-  MLPipelineStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/mlpipeline/mlpipeline.feature.template.yaml'
-          - S3Region:
-              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-            S3Bucket:
-              !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
-        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
-        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
-        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
-        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
+  #  CopyGlueScriptsStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/util/copy.scripts.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #
+  #  MeterDataGeneratorStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Condition: DeployMeterGeneratorAndHesSimulator
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/simulator/headend.system.simulator.main.yaml'
+  #        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+  #      Parameters:
+  #        GenerationState: 'ENABLED'
+  #        GenerationInterval: !Ref GenerationInterval
+  #        TotalDevices: !Ref TotalDevices
+  #        RegionalVoltage: 220
+  #        LateArrivalSimulate: 'DISABLED'
+  #        LateArrivalPercent: 10
+  #        LateArrivalMinuteOffset: 1440
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        QSS3BucketRegion: !Ref QSS3BucketRegion
+  #
+  #  IntegrationStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/integration.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #
+  #  DataStorageStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/datastorage/datastorage.template.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #
+  #  MeterreadingsDataflowStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/meterreading/meterreading.dataflow.template.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
+  #        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+  #        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
+  #        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+  #        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+  #        IntegrationBus: !GetAtt IntegrationStack.Outputs.IntegrationEventBus
+  #        DemoMode: !Ref DemoMode
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        QSS3BucketRegion: !Ref QSS3BucketRegion
+  #
+  #  HesAdapterStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Condition: DeployMeterGeneratorAndHesSimulator
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/integration/hes.adapter.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        OrchestratorState: "ENABLED"
+  #        OrchestratorInterval: !Ref GenerationInterval
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        SFTPServerAddress: !GetAtt MeterDataGeneratorStack.Outputs.SftpServerAddress
+  #        SFTPUserName: !GetAtt MeterDataGeneratorStack.Outputs.SftpUserName
+  #        SFTPSecretARN: !GetAtt MeterDataGeneratorStack.Outputs.SecretARN
+  #        ReadingsFileBaseURL: !GetAtt MeterDataGeneratorStack.Outputs.ApiGatewayInvokeURL
+  #        InboundDataBucket: !GetAtt MeterreadingsDataflowStack.Outputs.InboundDataBucket
+  #
+  #  WeatherDataflowStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/weather/weather.dataflow.template.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
+  #        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+  #        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
+  #        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+  #        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        QSS3BucketRegion: !Ref QSS3BucketRegion
+  #
+  #  TopologyDataflowStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dataflow/topology/topology.dataflow.template.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
+  #        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+  #        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
+  #        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+  #        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        QSS3BucketRegion: !Ref QSS3BucketRegion
+  #
+  #  VoltVarFeatureStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/voltvar/voltvar.feature.template.yaml'
+  #        - S3Region:
+  #            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #          S3Bucket:
+  #            !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+  #        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #
+  #  MLPipelineStack:
+  #    Type: 'AWS::CloudFormation::Stack'
+  #    Properties:
+  #      TemplateURL: !Sub
+  #          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/mlpipeline/mlpipeline.feature.template.yaml'
+  #          - S3Region:
+  #              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+  #            S3Bucket:
+  #              !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+  #      Parameters:
+  #        StagingDataBucket: !GetAtt DataStorageStack.Outputs.StagingDataBucket
+  #        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+  #        GlueStagingDatabase: !GetAtt DataStorageStack.Outputs.GlueStagingDatabase
+  #        GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
+  #        MdaGlueScriptBucket: !GetAtt CopyGlueScriptsStack.Outputs.MdaGlueScriptBucket
+  #        QSS3BucketName: !Ref QSS3BucketName
+  #        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  #        QSS3BucketRegion: !Ref QSS3BucketRegion
 
   GrafanaStack:
     Type: 'AWS::CloudFormation::Stack'
+    Condition: DeployGrafanaDashboard
     Properties:
       TemplateURL: !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/visualization/grafana.yaml'
-          - S3Region:
-              !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
-            S3Bucket:
-              !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/visualization/grafana.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       Parameters:
+        AthenaWorkgroup: !Ref AthenaWorkgroup
+        GrafanaDashboardAuthenticationProvider: !Ref GrafanaDashboardAuthenticationProvider
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        AthenaWorkgroup: !Ref AthenaWorkgroup
 
 
 Outputs:
   StackName:
     Description: Stack name.
     Value: !Sub '${AWS::StackName}'
-  StagingDataBucket:
-    Description: S3 bucket that contains the staging data.
-    Value: !GetAtt DataStorageStack.Outputs.StagingDataBucket
-  IntegratedDataBucket:
-    Description: S3 bucket that contains the integrated data.
-    Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+#  StagingDataBucket:
+#    Description: S3 bucket that contains the staging data.
+#    Value: !GetAtt DataStorageStack.Outputs.StagingDataBucket
+#  IntegratedDataBucket:
+#    Description: S3 bucket that contains the integrated data.
+#    Value: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
 
 Parameters:
   DemoMode:
@@ -206,7 +209,7 @@ Parameters:
       - 'true'
       - 'false'
     Description:
-      If DemoMode is enabled, additional utility functions will be deployed to customize the MDA for demo purposes. 
+      If DemoMode is enabled, additional utility functions will be deployed to customize the MDA for demo purposes.
       The overall functionality will not be changed, but the OOTB demo experience will be improved.
   MeterDataGenerator:
     Default: 'DISABLED'
@@ -228,6 +231,24 @@ Parameters:
     Description: Number of devices to generate readings at each interval.
     Type: Number
     Default: 10000
+  GrafanaDashboard:
+    Type: String
+    Default: 'DISABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+    Description:
+      Enable or disable Grafana Dashboards. If you enable grafana you need to decide between two authentication provider.
+      Please consult the documentation BEFORE deploying the MDA solution. (Default SAML)
+  GrafanaDashboardAuthenticationProvider:
+    Type: String
+    AllowedValues:
+      - AWS_SSO
+      - SAML
+    Default: SAML
+    Description:
+      The grafana authentication provider can either be AWS IAM Identity Center (Successor to AWS Single Sign-On) or SAML. 
+      Both will require additional manual steps. Please consult the documentation BEFORE deploying the MDA solution.
   QSS3BucketName:
     AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
     ConstraintDescription: >-
@@ -282,6 +303,8 @@ Metadata:
           - GenerationInterval
           - TotalDevices
           - AthenaWorkgroup
+          - GrafanaDashboard
+          - GrafanaDashboardAuthenticationProvider
       - Label:
           default: AWS solution configuration
         Parameters:
@@ -299,6 +322,10 @@ Metadata:
         default: Number of devices
       AthenaWorkgroup:
         default: Athena work group name
+      GrafanaDashboard:
+        default: Enable/disable grafana dashboard
+      GrafanaDashboardAuthenticationProvider:
+        default: Grafana authentication provider
       QSS3BucketName:
         default: AWS solution S3 bucket name
       QSS3KeyPrefix:
