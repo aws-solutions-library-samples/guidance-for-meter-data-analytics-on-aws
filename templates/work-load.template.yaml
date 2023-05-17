@@ -233,7 +233,7 @@ Parameters:
     Default: 10000
   GrafanaDashboard:
     Type: String
-    Default: 'DISABLED'
+    Default: 'ENABLED'
     AllowedValues:
       - 'ENABLED'
       - 'DISABLED'

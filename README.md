@@ -1,6 +1,9 @@
 # Guidance for Meter Data Analytics on AWS
 
-## Customized deployment
+## Grafana usage
+Before deploying the stack, please consult the [Grafana documentation](doc/grafana), if you want to use the dashboards.
+
+## Deployment
 
 With this instruction describes how to deploy the Meter Data Analytics (MDA) guidance to your own account.
 
