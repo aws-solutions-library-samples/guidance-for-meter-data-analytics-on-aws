@@ -1,48 +1,221 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: "Create Grafana Role for accessing Athena. (SO9213)"
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Launches AWS Managed Grafana - Still needs an admin user assigned | Create Grafana Role for accessing Athena. (SO9213)"
+
+Parameters:
+  AthenaWorkgroup:
+    Type: String
+    Default: grafana-athena-workgroup
+    Description: Name of the athena workgroup grafana will use to query.
+  GrafanaDashboardAuthenticationProvider:
+    Type: String
+    AllowedValues:
+      - AWS_SSO
+      - SAML
+    Default: AWS_SSO
+    Description:
+      The grafana authentication provider can either be AWS IAM Identity Center (Successor to AWS Single Sign-On) or SAML.
+      Both will require additional manual steps. Please consult the documentation BEFORE deploying the MDA solution.
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Resources:
+  GrafanaBucket:
+    Type: AWS::S3::Bucket
+
+  AmazonGrafanaWorkspaceIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonGrafanaAthenaAccess'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - grafana.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: S3ReadWriteAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketLocation'
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListMultipartUploadParts'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:CreateBucket'
+                  - 's3:PutObject'
+                  - 's3:PutBucketPublicAccessBlock'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
+
+
+  AmazonGrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      AccountAccessType: CURRENT_ACCOUNT
+      DataSources:
+        - ATHENA
+      Name: AmazonGrafanaWorkspace
+      Description: Amazon Grafana Workspace
+      AuthenticationProviders:
+        - !Ref GrafanaDashboardAuthenticationProvider
+      PermissionType: CUSTOMER_MANAGED
+      RoleArn: !GetAtt
+        - AmazonGrafanaWorkspaceIAMRole
+        - Arn
 
   GrafanaAthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
       Name: !Ref AthenaWorkgroup
       Description: Athena Workgroup for Amazon Grafana
-      RecursiveDeleteOption: false
+      RecursiveDeleteOption: true
       State: ENABLED
       Tags:
         - Key: "GrafanaDataSource"
           Value: "true"
       WorkGroupConfiguration:
         ResultConfiguration:
-          OutputLocation: !Sub 's3://${AthenaQueryBucket}'  
+          OutputLocation: !Sub 's3://${GrafanaBucket}/athena'
+
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
+              - Effect: Allow
+                Action:
+                  - 'grafana:DescribeWorkspace'
+                  - 'grafana:ListWorkspaces'
+                  - 'grafana:CreateWorkspaceApiKey'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:grafana:*:*:/workspaces/*'
+              - Effect: Allow
+                Action:
+                  - 'grafana:ListWorkspaces'
+                Resource:
+                  - '*'
+
+  GrafanaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/configure_grafana/lambda.zip'
+      Handler: 'app.lambda_handler'
+      Runtime: "python3.9"
+      Role: !GetAtt "LambdaExecutionRole.Arn"
+      Timeout: 120
+      Environment:
+        Variables:
+          S3KeyPrefix: !Ref QSS3KeyPrefix
+
+  GrafanaAPI:
+    Type: Custom::GrafanaAPI
+    Properties:
+      ServiceToken: !GetAtt GrafanaFunction.Arn
+      grafanaId: !Ref AmazonGrafanaWorkspace
+      bucket: !Ref QSS3BucketName
+      workgroup: !Ref AthenaWorkgroup
 
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E3001
+        - E9008
+        - E1010
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
           default: 'Grafana configuration'
         Parameters:
-          - AthenaQueryBucket
           - AthenaWorkgroup
+          - GrafanaDashboardAuthenticationProvider
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
     ParameterLabels:
-      AthenaQueryBucket:
-        default: Athena query bucket
       AthenaWorkgroup:
-        default: Athena workgroup
+        default: Athena Workgroup
+      GrafanaDashboardAuthenticationProvider:
+        default: Grafana authentication provider
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
 
-Parameters:
-  AthenaQueryBucket:
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    ConstraintDescription: >-
-      Athena Query bucket name can include numbers, lowercase letters, uppercase
-      letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Description: >-
-      S3 bucket name to save Athena Query results.
-      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
-      It cannot start or end with a hyphen (-).
-    Type: String
-  AthenaWorkgroup:
-    Type: String
-    Default: grafana-athena-workgroup
-    Description: Name of the athena workgroup grafana will use to query.
+Outputs:
+  WorkspaceEndpoint:
+    Value: !GetAtt
+      - AmazonGrafanaWorkspace
+      - Endpoint
+  WorkspaceStatus:
+    Value: !GetAtt
+      - AmazonGrafanaWorkspace
+      - Status
+  WorkspaceId:
+    Value: !Ref AmazonGrafanaWorkspace
+  GrafanaVersion:
+    Value: !GetAtt
+      - AmazonGrafanaWorkspace
+      - GrafanaVersion
