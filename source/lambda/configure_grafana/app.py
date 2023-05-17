@@ -36,11 +36,12 @@ def lambda_handler(event, context):
 
     s3_key_prefix = os.environ['S3KeyPrefix']
 
+    region = str(os.environ['AWS_REGION'])
     client = boto3.client('grafana')
     grafana_id = event["ResourceProperties"]["grafanaId"]
     bucket = event["ResourceProperties"]["bucket"]
     athena_workgroup = event["ResourceProperties"]["workgroup"]
-    grafana_workspace = "https://" + str(grafana_id) + ".grafana-workspace.us-east-1.amazonaws.com"
+    grafana_workspace = "https://" + str(grafana_id) + ".grafana-workspace." + region +".amazonaws.com"
     data_path = f"{s3_key_prefix}assets/grafana/"
     # create API key
     key_name = 'Admin-' + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
@@ -65,6 +66,7 @@ def lambda_handler(event, context):
     ds = json.loads(data)
 
     ds['jsonData']['workgroup'] = athena_workgroup
+    ds['jsonData']['workgroup'] = region
 
     requests.post(
         url=grafana_workspace + api_path,
