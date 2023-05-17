@@ -1,5 +1,6 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: "Launches AWS Managed Grafana - Still needs an admin user assigned | Create Grafana Role for accessing Athena. (qs-1r18anahd)"
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Launches AWS Managed Grafana - Still needs an admin user assigned | Create Grafana Role for accessing Athena. (SO9213)"
 
 Parameters:
   AthenaWorkgroup:
@@ -7,17 +8,40 @@ Parameters:
     Default: grafana-athena-workgroup
     Description: Name of the athena workgroup grafana will use to query.
   QSS3BucketName:
-    Description: The name of the bucket that contains the packaged source
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
     Type: String
-    Default : "mda-data-account-id"
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
 
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
 Resources:
+  GrafanaBucket:
+    Type: AWS::S3::Bucket
+
   AmazonGrafanaWorkspaceIAMRole:
     Type: 'AWS::IAM::Role'
     Properties:
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonGrafanaAthenaAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonGrafanaAthenaAccess'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -26,7 +50,7 @@ Resources:
               Service:
                 - grafana.amazonaws.com
             Action:
-              - 'sts:AssumeRole' 
+              - 'sts:AssumeRole'
       Policies:
         - PolicyName: S3ReadWriteAccess
           PolicyDocument:
@@ -43,23 +67,23 @@ Resources:
                   - 's3:CreateBucket'
                   - 's3:PutObject'
                   - 's3:PutBucketPublicAccessBlock'
-                Resource: 
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
 
 
   AmazonGrafanaWorkspace:
-    Type: 'AWS::Grafana::Workspace'
+    Type: AWS::Grafana::Workspace
     Properties:
       AccountAccessType: CURRENT_ACCOUNT
-      DataSources: 
+      DataSources:
         - ATHENA
       Name: AmazonGrafanaWorkspace
       Description: Amazon Grafana Workspace
       AuthenticationProviders:
         - AWS_SSO
       PermissionType: CUSTOMER_MANAGED
-      RoleArn: !GetAtt 
+      RoleArn: !GetAtt
         - AmazonGrafanaWorkspaceIAMRole
         - Arn
 
@@ -75,7 +99,7 @@ Resources:
           Value: "true"
       WorkGroupConfiguration:
         ResultConfiguration:
-          OutputLocation: !Sub 's3://${QSS3BucketName}/athena'
+          OutputLocation: !Sub 's3://${GrafanaBucket}/athena'
 
   LambdaExecutionRole:
     Type: "AWS::IAM::Role"
@@ -86,9 +110,9 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-              - lambda.amazonaws.com
+                - lambda.amazonaws.com
             Action:
-            - sts:AssumeRole
+              - sts:AssumeRole
       Policies:
         - PolicyName: root
           PolicyDocument:
@@ -99,47 +123,40 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
               - Effect: Allow
                 Action:
                   - 's3:GetObject'
                   - 's3:ListBucket'
-                Resource: 
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
-              - Effect: Allow
-                Action:
-                  - 's3:GetObject'
-                  - 's3:ListBucket'
-                Resource: 
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}'
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
               - Effect: Allow
                 Action:
                   - 'grafana:DescribeWorkspace'
                   - 'grafana:ListWorkspaces'
                   - 'grafana:CreateWorkspaceApiKey'
-                Resource: 
-                  - 'arn:aws:grafana:*:*:/workspaces/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:grafana:*:*:/workspaces/*'
               - Effect: Allow
                 Action:
                   - 'grafana:ListWorkspaces'
-                Resource: 
+                Resource:
                   - '*'
 
-
-
-
   GrafanaFunction:
-    Type: AWS::Lambda::Function
+    Type: AWS::Serverless::Function
     Properties:
-      Code:
-        S3Bucket: !Ref QSS3BucketName
-        S3Key: "assets/lambda/configure_grafana/lambda.zip"
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key: !Sub '${QSS3KeyPrefix}assets/lambda/configure_grafana/lambda.zip'
       Handler: 'app.lambda_handler'
       Runtime: "python3.9"
       Role: !GetAtt "LambdaExecutionRole.Arn"
       Timeout: 120
+      Environment:
+        Variables:
+          S3KeyPrefix: !Ref QSS3KeyPrefix
 
   GrafanaAPI:
     Type: Custom::GrafanaAPI
@@ -148,32 +165,45 @@ Resources:
       grafanaId: !Ref AmazonGrafanaWorkspace
       bucket: !Ref QSS3BucketName
       workgroup: !Ref AthenaWorkgroup
-    DependsOn: AmazonGrafanaWorkspace
 
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E3001
+        - E9008
+        - E1010
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
           default: 'Grafana configuration'
         Parameters:
-          - QSS3BucketName
           - AthenaWorkgroup
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
     ParameterLabels:
       AthenaWorkgroup:
         default: Athena Workgroup
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
 
 Outputs:
   WorkspaceEndpoint:
-    Value: !GetAtt 
+    Value: !GetAtt
       - AmazonGrafanaWorkspace
       - Endpoint
   WorkspaceStatus:
-    Value: !GetAtt 
+    Value: !GetAtt
       - AmazonGrafanaWorkspace
       - Status
   WorkspaceId:
     Value: !Ref AmazonGrafanaWorkspace
   GrafanaVersion:
-    Value: !GetAtt 
+    Value: !GetAtt
       - AmazonGrafanaWorkspace
       - GrafanaVersion

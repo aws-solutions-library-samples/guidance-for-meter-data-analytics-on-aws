@@ -22,27 +22,31 @@ import requests
 import cfnresponse
 import string
 import random
+import os
+
 
 # Creates an Grafana API key and automatically creates the dashboards
 def lambda_handler(event, context):
-    
     if event["RequestType"] == "Delete":
         cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
         return {
             'statusCode': 200,
             'body': "success"
         }
-   
+
+    s3_key_prefix = os.environ['S3KeyPrefix']
+
     client = boto3.client('grafana')
     grafana_id = event["ResourceProperties"]["grafanaId"]
     bucket = event["ResourceProperties"]["bucket"]
     athena_workgroup = event["ResourceProperties"]["workgroup"]
     grafana_workspace = "https://" + str(grafana_id) + ".grafana-workspace.us-east-1.amazonaws.com"
-    data_path = "artefacts/assets/grafana/"
+    data_path = f"{s3_key_prefix}assets/grafana/"
     # create API key
     key_name = 'Admin-' + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
-    response = client.create_workspace_api_key(keyName=key_name, keyRole='ADMIN', secondsToLive=4000, workspaceId=str(grafana_id))
- 
+    response = client.create_workspace_api_key(keyName=key_name, keyRole='ADMIN', secondsToLive=4000,
+                                               workspaceId=str(grafana_id))
+
     api_key = response["key"]
 
     header = {
@@ -62,19 +66,19 @@ def lambda_handler(event, context):
 
     ds['jsonData']['workgroup'] = athena_workgroup
 
-    r = requests.post(
-        url = grafana_workspace+api_path, 
-        headers = header, 
-        data = json.dumps(ds), 
+    requests.post(
+        url=grafana_workspace + api_path,
+        headers=header,
+        data=json.dumps(ds),
         verify=True)
 
     r = requests.get(
-            url = grafana_workspace+api_path, 
-            headers = header, 
-            verify=True)
+        url=grafana_workspace + api_path,
+        headers=header,
+        verify=True)
     # assuming only one datasource exists
     datasource_id = r.json()[0]['uid']
-    
+
     api_path = "/api/dashboards/db"
 
     # deploy weather dashboard
@@ -91,41 +95,41 @@ def lambda_handler(event, context):
     for i in range(len(db['dashboard']['templating']['list'])):
         if 'datasource' in db['dashboard']['templating']['list'][i]:
             db['dashboard']['templating']['list'][i]['datasource']['uid'] = datasource_id
-    
+
     r = requests.post(
-        url = grafana_workspace+api_path, 
-        headers = header, 
-        data = json.dumps(db), 
-        verify=True)  
-    
+        url=grafana_workspace + api_path,
+        headers=header,
+        data=json.dumps(db),
+        verify=True)
+
     # deploy outage map dashboard
     key = data_path + "outage-map.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
-    
+
     for i in range(len(db['dashboard']['panels'])):
         db['dashboard']['panels'][i]['datasource']['uid'] = datasource_id
         for j in range(len(db['dashboard']['panels'][i]['targets'])):
             if 'datasource' in db['dashboard']['panels'][i]['targets'][j]:
                 db['dashboard']['panels'][i]['targets'][j]['datasource']['uid'] = datasource_id
-    
+
     for i in range(len(db['dashboard']['templating']['list'])):
         if 'datasource' in db['dashboard']['templating']['list'][i]:
             db['dashboard']['templating']['list'][i]['datasource']['uid'] = datasource_id
 
     r = requests.post(
-        url = grafana_workspace+api_path, 
-        headers = header, 
-        data = json.dumps(db), 
+        url=grafana_workspace + api_path,
+        headers=header,
+        data=json.dumps(db),
         verify=True)
-    
+
     # deploy anomaly spike and dip dashboard
     key = data_path + "anomaly-dip-n-spike.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
-    
+
     for i in range(len(db['dashboard']['panels'])):
         db['dashboard']['panels'][i]['datasource']['uid'] = datasource_id
         for j in range(len(db['dashboard']['panels'][i]['targets'])):
@@ -137,17 +141,17 @@ def lambda_handler(event, context):
             db['dashboard']['templating']['list'][i]['datasource']['uid'] = datasource_id
 
     r = requests.post(
-        url = grafana_workspace+api_path, 
-        headers = header, 
-        data = json.dumps(db), 
+        url=grafana_workspace + api_path,
+        headers=header,
+        data=json.dumps(db),
         verify=True)
-    
+
     # deploy forecast dashboard
     key = data_path + "forecast.json"
     obj = s3.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
     db = json.loads(data)
-    
+
     for i in range(len(db['dashboard']['panels'])):
         db['dashboard']['panels'][i]['datasource']['uid'] = datasource_id
         for j in range(len(db['dashboard']['panels'][i]['targets'])):
@@ -159,11 +163,10 @@ def lambda_handler(event, context):
             db['dashboard']['templating']['list'][i]['datasource']['uid'] = datasource_id
 
     r = requests.post(
-        url = grafana_workspace+api_path, 
-        headers = header, 
-        data = json.dumps(db), 
+        url=grafana_workspace + api_path,
+        headers=header,
+        data=json.dumps(db),
         verify=True)
-    
 
     cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
     return {
