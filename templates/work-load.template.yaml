@@ -4,6 +4,7 @@ Description: "Workload template to deploy the AWS Quick Start for the Utility Me
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
   DeployMeterGeneratorAndHesSimulator: !Equals [ !Ref MeterDataGenerator, 'ENABLED' ]
+  DeployGrafanaDashboard: !Equals [ !Ref GrafanaDashboard, 'ENABLED' ]
 
 Resources:
   CopyGlueScriptsStack:
@@ -172,6 +173,23 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
 
+  GrafanaStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: DeployGrafanaDashboard
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/feature/visualization/grafana.yaml'
+        - S3Region:
+            !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+          S3Bucket:
+            !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      Parameters:
+        AthenaWorkgroup: !Ref AthenaWorkgroup
+        GrafanaDashboardAuthenticationProvider: !Ref GrafanaDashboardAuthenticationProvider
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+
+
 Outputs:
   StackName:
     Description: Stack name.
@@ -191,7 +209,7 @@ Parameters:
       - 'true'
       - 'false'
     Description:
-      If DemoMode is enabled, additional utility functions will be deployed to customize the MDA for demo purposes. 
+      If DemoMode is enabled, additional utility functions will be deployed to customize the MDA for demo purposes.
       The overall functionality will not be changed, but the OOTB demo experience will be improved.
   MeterDataGenerator:
     Default: 'DISABLED'
@@ -213,6 +231,24 @@ Parameters:
     Description: Number of devices to generate readings at each interval.
     Type: Number
     Default: 10000
+  GrafanaDashboard:
+    Type: String
+    Default: 'ENABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+    Description:
+      Enable or disable Grafana Dashboards. If you enable grafana you need to decide between two authentication provider.
+      Please consult the documentation BEFORE deploying the MDA solution. (Default SAML)
+  GrafanaDashboardAuthenticationProvider:
+    Type: String
+    AllowedValues:
+      - AWS_SSO
+      - SAML
+    Default: SAML
+    Description:
+      The grafana authentication provider can either be AWS IAM Identity Center (Successor to AWS Single Sign-On) or SAML. 
+      Both will require additional manual steps. Please consult the documentation BEFORE deploying the MDA solution.
   QSS3BucketName:
     AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
     ConstraintDescription: >-
@@ -248,6 +284,10 @@ Parameters:
       the template. Changing the prefix updates code references to point to
       a new location.
     Type: String
+  AthenaWorkgroup:
+    Description: Athena work group.
+    Type: String
+    Default: "grafana-workgroup"
 
 
 Metadata:
@@ -262,6 +302,9 @@ Metadata:
           - MeterDataGenerator
           - GenerationInterval
           - TotalDevices
+          - AthenaWorkgroup
+          - GrafanaDashboard
+          - GrafanaDashboardAuthenticationProvider
       - Label:
           default: AWS solution configuration
         Parameters:
@@ -277,6 +320,12 @@ Metadata:
         default: Generation interval
       TotalDevices:
         default: Number of devices
+      AthenaWorkgroup:
+        default: Athena work group name
+      GrafanaDashboard:
+        default: Enable/disable grafana dashboard
+      GrafanaDashboardAuthenticationProvider:
+        default: Grafana authentication provider
       QSS3BucketName:
         default: AWS solution S3 bucket name
       QSS3KeyPrefix:

@@ -1,837 +1,785 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "gnetId": null,
-  "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1643935763394,
-  "links": [],
-  "liveNow": false,
-  "panels": [
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 10,
-      "options": {
-        "content": "<center> <h1> Welcome John Smith </h1> </center>\n  \n<center> View how weather is impacting your yearly costs </center>",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.2.5",
-      "targets": [
+  "dashboard": {
+    "annotations": {
+      "list": [
         {
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": false,
-          "rawSql": "SELECT\n  reading_date_time AS \"time\",\n  reading_value\nFROM daily\nWHERE\n  $__timeFilter(reading_date_time)\nORDER BY 1",
-          "refId": "A",
-          "select": [
-            [
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "iteration": 1683903201700,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 10,
+        "options": {
+          "content": "<center> <h1> Welcome John Smith </h1> </center>\n  \n<center> View how weather is impacting your yearly costs </center>",
+          "mode": "markdown"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "format": "time_series",
+            "group": [],
+            "metricColumn": "null",
+            "rawQuery": false,
+            "rawSql": "SELECT reading_date_time AS \"time\", reading_value FROM mda_database_integrated.meter_readings_integrated_parquet WHERE  $__timeFilter(reading_date_time) ORDER BY 1",
+            "refId": "A",
+            "select": [
+              [
+                {
+                  "params": [
+                    "reading_value"
+                  ],
+                  "type": "column"
+                }
+              ]
+            ],
+            "table": "daily",
+            "timeColumn": "reading_date_time",
+            "timeColumnType": "timestamp",
+            "where": [
               {
-                "params": [
-                  "reading_value"
-                ],
-                "type": "column"
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
               }
             ]
-          ],
-          "table": "daily",
-          "timeColumn": "reading_date_time",
-          "timeColumnType": "timestamp",
-          "where": [
+          }
+        ],
+        "type": "text"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "currencyUSD"
+          },
+          "overrides": [
             {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
+              "matcher": {
+                "id": "byName",
+                "options": "A yearly_consumption"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Past Year"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "B yearly_consumption"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Current Year"
+                }
+              ]
             }
           ]
-        }
-      ],
-      "type": "text"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "text",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "kwatt"
         },
-        "overrides": [
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 0,
+          "y": 4
+        },
+        "id": 14,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "sum"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "A consumption"
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Past Year"
-              }
-            ]
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "SELECT reading_value * 0.25 *  $CostPerKWh AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE year = $year-1 AND reading_type='kw' AND meter_id = '$meter_id'\n",
+            "refId": "A"
           },
           {
-            "matcher": {
-              "id": "byName",
-              "options": "B consumption"
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Current Year"
-              }
-            ]
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "SELECT reading_value * 0.25 * $CostPerKWh AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE year = $year AND reading_type='kw' AND meter_id = '$meter_id'\n",
+            "refId": "B"
           }
-        ]
+        ],
+        "title": "YoY Difference in Average Power Cost per Meter",
+        "type": "stat"
       },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 4
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
         },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.5",
-      "targets": [
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "kwatt"
           },
-          "format": 1,
-          "rawSQL": "select distinct aggregated_consumption as consumption,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n\nwhere cast(year as int) = $year - 1\nand meter_id = '$meter_id'\n\norder by 2",
-          "refId": "A"
-        },
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
-          },
-          "format": 1,
-          "hide": false,
-          "rawSQL": "select distinct aggregated_consumption as consumption,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n\nwhere year = '$year'\nand meter_id = '$meter_id'\n\norder by 2",
-          "refId": "B"
-        }
-      ],
-      "title": "YoY Difference in Avg Power Consumption",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "text",
-            "mode": "fixed"
-          },
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "A yearly_consumption"
               },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "currencyUSD"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "A cost"
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Past Year"
+                }
+              ]
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Past Year"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "B cost"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Current Year"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 4
-      },
-      "id": 14,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.5",
-      "targets": [
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
-          },
-          "format": 1,
-          "rawSQL": "select distinct aggregated_consumption * $CostPerKWh as cost,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n\nwhere cast(year as int) = $year - 1\nand meter_id = '$meter_id'\n\norder by 2",
-          "refId": "A"
-        },
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
-          },
-          "format": 1,
-          "hide": false,
-          "rawSQL": "select distinct aggregated_consumption * $CostPerKWh as cost,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n\nwhere year = '$year'\nand meter_id = '$meter_id'\n\norder by 2",
-          "refId": "B"
-        }
-      ],
-      "title": "YoY Difference in Avg Power Cost",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "text",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "B yearly_consumption"
               },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "fahrenheit"
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Selected Year"
+                }
+              ]
+            }
+          ]
         },
-        "overrides": [
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 8,
+          "y": 4
+        },
+        "id": 8,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "sum"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "A temperature"
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Past Year"
-              }
-            ]
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year -1 and reading_type='kw'\n",
+            "refId": "A",
+            "table": "meter_readings_integrated_parquet"
           },
           {
-            "matcher": {
-              "id": "byName",
-              "options": "B temperature"
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Current Year"
-              }
-            ]
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "SELECT reading_value * 0.25 AS yearly_consumption\nFROM mda_database_integrated.meter_readings_integrated_parquet\nWHERE meter_id = '$meter_id' and year= $year and reading_type='kw'\n",
+            "refId": "B"
           }
-        ]
+        ],
+        "title": "YoY Difference in Average Power Consumption per Meter",
+        "type": "stat"
       },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 4
-      },
-      "id": 15,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
         },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.5",
-      "targets": [
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "text",
+              "mode": "fixed"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "celsius"
           },
-          "format": 1,
-          "rawSQL": "select distinct (apparenttemperature * 9/5) + 32 AS \"temperature\",\ndate_trunc('week', time) as date\nfrom weather\n\nwhere year(time) = $year - 1\n\norder by 2",
-          "refId": "A"
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "A temperature"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Past Year"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "B temperature"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Selected Year"
+                }
+              ]
+            }
+          ]
         },
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 16,
+          "y": 4
+        },
+        "hideTimeOverride": false,
+        "id": 17,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
           },
-          "format": 1,
-          "hide": false,
-          "rawSQL": "select distinct (apparenttemperature * 9/5) + 32 AS \"temperature\",\ndate_trunc('week', time) as date\nfrom weather\n\nwhere year(time) = $year\n\norder by 2",
-          "refId": "B"
-        }
-      ],
-      "title": "YoY Difference in Avg Temperature",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 10
+          "text": {},
+          "textMode": "auto"
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "select temperature, time\nfrom mda_database_integrated.weather_data_integrated_weather\nwhere year(time) = $year-1\norder by 2",
+            "refId": "A",
+            "table": "meter_readings_integrated_parquet"
+          },
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "select temperature, time\nfrom mda_database_integrated.weather_data_integrated_weather\nwhere year(time) = $year\norder by 2",
+            "refId": "B"
+          }
+        ],
+        "title": "YoY Difference in Avg Temperature",
+        "type": "stat"
       },
-      "id": 6,
-      "panels": [],
-      "type": "row"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
           },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Monthly kwh consumption consumption"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Monthly Energy Consumption Cost"
+                }
+              ]
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Temperature _col0"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Temperature in °C"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 10
+        },
+        "hideTimeOverride": false,
+        "id": 20,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "8.4.7",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
             },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
             },
-            "thresholdsStyle": {
-              "mode": "off"
+            "format": 1,
+            "rawSQL": "SELECT \n    SUM(reading_value) * 0.25 * $CostPerKWh AS consumption, DATE_TRUNC('month',reading_date_time) as month\nFROM\n    meter_readings_integrated_parquet\nWHERE\n    meter_id = '$meter_id' AND reading_type = 'kw' and year = $year-1\nGROUP BY DATE_TRUNC('month',reading_date_time)\nORDER BY 2\n    \n",
+            "refId": "Monthly kwh consumption"
+          },
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "SELECT \n    AVG(temperature), DATE_TRUNC('month',time) as month\nFROM\n    weather_data_integrated_weather \nWHERE\n    YEAR(time) = $year-1\nGROUP BY DATE_TRUNC('month',time)\nORDER BY 2\n    \n",
+            "refId": "Temperature"
+          }
+        ],
+        "timeShift": "1y",
+        "title": "Past Year - Monthly Trend",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "-08SeM84z"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "monthl energy consumption cost consumption"
               },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/temperature/"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 1
-              },
-              {
-                "id": "unit",
-                "value": "degree"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "displayName",
-                "value": "Temperature"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "auto"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Monthly Energy Consumption Cost"
                 }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/consumption/"
+              ]
             },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#5794F2",
-                  "mode": "fixed"
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Temperature _col0"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Temperature in °C"
                 }
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "bars"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 100
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              },
-              {
-                "id": "displayName",
-                "value": "Cost"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 11
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "8.2.2",
-      "targets": [
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "meterdata",
-            "region": "__default"
-          },
-          "format": 0,
-          "hide": false,
-          "rawSQL": "select distinct aggregated_consumption * cast('$CostPerKWh' as double) as consumption,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n-- where year = '$year'\nand meter_id = '$meter_id'\norder by 2",
-          "refId": "consumption",
-          "table": "aggregated_weekly"
-        },
-        {
-          "column": "time",
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
-          },
-          "format": 0,
-          "rawSQL": "SELECT\n  date_trunc('week',time) as date,\n  avg((apparenttemperature * 9/5) + 32) as \"temperature\"\nFROM weather w\nGROUP BY 1\nORDER BY 1",
-          "refId": "weather",
-          "table": "weather"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Current Year - Weekly Trend",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+              ]
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
+          ]
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/temperature/"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 1
-              },
-              {
-                "id": "unit",
-                "value": "fahrenheit"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "displayName",
-                "value": "Temperature"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "auto"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 10
+        },
+        "id": 19,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom"
           },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/consumption/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#5794F2",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "bars"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 100
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              },
-              {
-                "id": "displayName",
-                "value": "Cost"
-              }
-            ]
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
           }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 20
-      },
-      "id": 13,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "8.2.2",
-      "targets": [
-        {
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "meterdata",
-            "region": "__default"
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "rawSQL": "SELECT \n    SUM(reading_value) * 0.25 * $CostPerKWh AS consumption, DATE_TRUNC('month',reading_date_time) as month\nFROM\n    meter_readings_integrated_parquet\nWHERE\n    meter_id = '$meter_id' AND reading_type = 'kw' and year = $year\nGROUP BY DATE_TRUNC('month',reading_date_time)\nORDER BY 2\n    \n",
+            "refId": "monthl energy consumption cost"
           },
-          "format": 0,
-          "hide": false,
-          "rawSQL": "select distinct aggregated_consumption * cast('$CostPerKWh' as double) as consumption,\ndate_trunc('week', time) as date\nfrom aggregated_weekly a\njoin weather b\non cast(a.year as int) = year(b.time)\nand a.month = month(b.time)\nand cast(a.week_of_year as int) = week(b.time)\n-- where cast(year as int) = cast('$year' as int) - 1\nand meter_id = '$meter_id'\norder by 2",
-          "refId": "consumption",
-          "table": "aggregated_weekly"
-        },
-        {
-          "column": "time",
-          "connectionArgs": {
-            "catalog": "__default",
-            "database": "__default",
-            "region": "__default"
-          },
-          "format": 0,
-          "rawSQL": "SELECT\n  -- week(\"time\") as \"week\",\n  date_trunc('week',time) as date,\n  avg((apparenttemperature * 9/5) + 32) AS \"temperature\"\nFROM weather w\n-- where year(time) = cast('$year' as int) - 1\nGROUP BY 1\nORDER BY 1",
-          "refId": "weather",
-          "table": "weather"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": "1y",
-      "title": "Past Year - Weekly Trend",
-      "type": "timeseries"
-    }
-  ],
-  "refresh": "",
-  "schemaVersion": 32,
-  "style": "dark",
-  "tags": [],
-  "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "2013",
-          "value": "2013"
-        },
-        "datasource": null,
-        "definition": "SELECT DISTINCT year\nFROM aggregated_monthly",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": false,
-        "label": "year",
-        "multi": false,
-        "name": "year",
-        "options": [],
-        "query": {
-          "rawSQL": "SELECT DISTINCT year\nFROM aggregated_weekly"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "MAC000049",
-          "value": "MAC000049"
-        },
-        "datasource": null,
-        "definition": "",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "meter_id",
-        "options": [],
-        "query": {
-          "rawSQL": "SELECT DISTINCT meter_id\nFROM aggregated_weekly\nWHERE year='$year'"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "description": null,
-        "error": null,
-        "hide": 2,
-        "label": "CostPerKWh",
-        "name": "CostPerKWh",
-        "query": "0.11",
-        "skipUrlSync": false,
-        "type": "constant"
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "-08SeM84z"
+            },
+            "format": 1,
+            "hide": false,
+            "rawSQL": "SELECT \n    AVG(temperature), DATE_TRUNC('month',time) as month\nFROM\n    weather_data_integrated_weather \nWHERE\n    YEAR(time) = $year\nGROUP BY DATE_TRUNC('month',time)\nORDER BY 2\n    \n",
+            "refId": "Temperature"
+          }
+        ],
+        "title": "Current Year - Monthly Trend",
+        "type": "timeseries"
       }
-    ]
+    ],
+    "refresh": "",
+    "schemaVersion": 35,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": true,
+            "text": "2023",
+            "value": "2023"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "definition": "[object Object]",
+          "hide": 0,
+          "includeAll": false,
+          "label": "",
+          "multi": false,
+          "name": "year",
+          "options": [],
+          "query": {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "format": 1,
+            "rawSQL": "SELECT DISTINCT cast(year(time) as varchar) FROM mda_database_integrated.weather_data_integrated_weather;",
+            "table": "meter_readings_integrated_parquet"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 3,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "1592508d-75b5-3203-8dfe-38d8a7661d37",
+            "value": "1592508d-75b5-3203-8dfe-38d8a7661d37"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "-08SeM84z"
+          },
+          "definition": "",
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "meter_id",
+          "options": [],
+          "query": {
+            "column": "meter_id",
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default"
+            },
+            "format": 1,
+            "rawSQL": "SELECT DISTINCT meter_id from mda_database_integrated.meter_readings_integrated_parquet;\n",
+            "table": "meter_readings_integrated_parquet"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "hide": 2,
+          "label": "CostPerKWh",
+          "name": "CostPerKWh",
+          "query": "0.23",
+          "skipUrlSync": false,
+          "type": "constant"
+        }
+      ]
+    },
+    "time": {
+      "from": "now/y",
+      "to": "now/y"
+    },
+    "timepicker": {
+      "hidden": false
+    },
+    "timezone": "",
+    "title": "Usage vs. Weather",
+    "uid": "2_GAgHpnz2",
+    "version": 28,
+    "weekStart": ""
   },
-  "time": {
-    "from": "2013-01-01T06:00:00.000Z",
-    "to": "2014-01-01T05:59:59.000Z"
-  },
-  "timepicker": {
-    "hidden": true
-  },
-  "timezone": "",
-  "title": "Usage vs. Weather",
-  "uid": "2_GAgHpnz",
-  "version": 4
+  "message": "Weather Dashboard",
+  "overwrite": true
 }
