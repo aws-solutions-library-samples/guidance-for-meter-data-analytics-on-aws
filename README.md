@@ -1,7 +1,7 @@
 # Guidance for Meter Data Analytics on AWS
 
 ## Grafana usage
-Before deploying the stack, please consult the [Grafana documentation](doc/grafana), if you want to use the dashboards.
+Before deploying the stack, please consult the [Grafana documentation](doc/grafana.md), if you want to use the dashboards.
 
 ## Deployment
 
