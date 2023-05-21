@@ -79,6 +79,9 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}/*'
+
 
 
   AmazonGrafanaWorkspace:
