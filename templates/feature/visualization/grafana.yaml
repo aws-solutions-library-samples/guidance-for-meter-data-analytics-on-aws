@@ -79,6 +79,9 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}/*'
+
 
 
   AmazonGrafanaWorkspace:
@@ -152,6 +155,11 @@ Resources:
                   - 'grafana:ListWorkspaces'
                 Resource:
                   - '*'
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:CreateSecret'
+                  - 'secretsmanager:UpdateSecret'
+                Resource: !Sub 'arn:aws:secretsmanager:*:${AWS::AccountId}:secret:*'
 
   GrafanaFunction:
     Type: AWS::Serverless::Function
