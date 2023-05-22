@@ -1,5 +1,8 @@
 # Guidance for Meter Data Analytics on AWS
 
+## API
+The guidance deploys example APIs, the document can be found [here](doc/api.md)
+
 ## Grafana usage
 Before deploying the stack, please consult the [Grafana documentation](doc/grafana.md), if you want to use the dashboards.
 

@@ -104,6 +104,34 @@ Resources:
             Path: /consumption/{meter_id}
             Method: GET
 
+  GetVoltagePerMeter:
+    Type: AWS::Serverless::Function
+    Description: Returns the voltage for a given meter.
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_get_voltage/lambda.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+      Environment:
+        Variables:
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+          bucket: !Ref ApiBucket
+      Role: !GetAtt LambdaApiRole.Arn
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MdaApiGateway
+            Path: /voltage/{meter_id}
+            Method: GET
+
   PyathenaDependencyLayer:
     Type: 'AWS::Serverless::LayerVersion'
     Properties:
