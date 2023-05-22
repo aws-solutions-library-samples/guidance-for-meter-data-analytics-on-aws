@@ -159,7 +159,7 @@ Resources:
                 Action:
                   - 'secretsmanager:CreateSecret'
                   - 'secretsmanager:UpdateSecret'
-                Resource: !Sub 'arn:aws:secretsmanager:*:${AWS::AccountId}:secret:*'
+                Resource: !Sub 'arn:${AWS::Partition}:secretsmanager:*:${AWS::AccountId}:secret:*'
 
   GrafanaFunction:
     Type: AWS::Serverless::Function
