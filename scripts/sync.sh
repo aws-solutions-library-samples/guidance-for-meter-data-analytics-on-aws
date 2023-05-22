@@ -2,9 +2,12 @@
 
 BUCKET=${1:?Please specify a destination bucket name}
 REGION=${2:-us-east-1}
+PACKAGE=${3:-true}
 
-echo "Packaging lambda functions first."
-./lambda-package.sh
+if [ "$PACKAGE" = true ]; then
+  echo "Packaging lambda functions first."
+  ./lambda-package.sh
+fi
 
 echo "Sync to $1"
 cd ../
