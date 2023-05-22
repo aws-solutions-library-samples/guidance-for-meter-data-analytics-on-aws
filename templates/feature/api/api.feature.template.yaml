@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: "Deploys API feature infrastructure. (SO9213)"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Feature configuration'
+        Parameters:
+          - GlueIntegratedDatabase
+          - IntegratedDataBucket
+      - Label:
+          default: 'AWS Quick Start configuration'
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      GlueIntegratedDatabase:
+        default: Glue integration database name
+      IntegratedDataBucket:
+        default: Integrated data bucket name
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+
+Parameters:
+  GlueIntegratedDatabase:
+    Type: String
+    Description: Glue integration database name
+  IntegratedDataBucket:
+    Type: String
+    Description: Integrated data bucket name
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets.
+      Only change this value if you customize or extend the Quick Start for your own use.
+      This string can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*[/]$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/) and must terminate in a forward slash.
+    Default: quickstart-aws-utility-meter-data-analytics-platform-v2/
+    Type: String
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub https://${MdaApiGateway}.execute-api.us-east-1.amazonaws.com
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
+
+Globals:
+  Function:
+    Runtime: python3.9
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+
+Resources:
+  ApiBucket:
+    Type: AWS::S3::Bucket
+
+  MdaApiGateway:
+    Type: AWS::Serverless::HttpApi
+
+  GetConsumptionPerMeter:
+    Type: AWS::Serverless::Function
+    Description: Returns the consumption for a given meter.
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_get_consumption/lambda.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+      Environment:
+        Variables:
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+          bucket: !Ref ApiBucket
+      Role: !GetAtt LambdaApiRole.Arn
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MdaApiGateway
+            Path: /consumption/{meter_id}
+            Method: GET
+
+  GetVoltagePerMeter:
+    Type: AWS::Serverless::Function
+    Description: Returns the voltage for a given meter.
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_get_voltage/lambda.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+      Environment:
+        Variables:
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+          bucket: !Ref ApiBucket
+      Role: !GetAtt LambdaApiRole.Arn
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MdaApiGateway
+            Path: /voltage/{meter_id}
+            Method: GET
+
+  PyathenaDependencyLayer:
+    Type: 'AWS::Serverless::LayerVersion'
+    Properties:
+      LayerName: !Sub "pyathena-layer-${AWS::Region}"
+      ContentUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/layer_pyathena/layer.zip'
+      CompatibleRuntimes:
+        - python3.9
+      LicenseInfo: 'Available under the MIT-0 license.'
+
+  LambdaApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: s3_athena_read
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "athena:StartQueryExecution"
+                  - "athena:GetQueryExecution"
+                  - "athena:GetQueryResults"
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:AbortMultipartUpload"
+                  - "s3:CreateBucket"
+                  - "s3:ListBucket"
+                  - "s3:DeleteObject"
+                  - "s3:GetBucketLocation"
+                  - "s3:ListMultipartUploadParts"
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ApiBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ApiBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
+                  - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
+              - Effect: Allow
+                Action:
+                  - 'glue:GetTable'
+                  - 'glue:GetTables'
+                  - 'glue:GetPartition'
+                  - 'glue:GetPartitions'
+                  - 'glue:BatchGetPartition'
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_*"
