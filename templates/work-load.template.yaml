@@ -202,6 +202,7 @@ Resources:
       Parameters:
         AthenaWorkgroup: !Ref AthenaWorkgroup
         GrafanaDashboardAuthenticationProvider: !Ref GrafanaDashboardAuthenticationProvider
+        IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
