@@ -186,6 +186,8 @@ Resources:
       Parameters:
         GlueIntegratedDatabase: !GetAtt DataStorageStack.Outputs.GlueIntegratedDatabase
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        MlResourcesBucket: !GetAtt MLPipelineStack.Outputs.MlResourcesBucket
+        GlueMlFeatureDatabase: !GetAtt MLPipelineStack.Outputs.GlueMlFeatureDatabase
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 

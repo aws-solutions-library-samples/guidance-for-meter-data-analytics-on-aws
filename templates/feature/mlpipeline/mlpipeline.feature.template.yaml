@@ -137,6 +137,8 @@ Conditions:
 Outputs:
   MlResourcesBucket:
     Value: !Ref MlResourcesBucket
+  GlueMlFeatureDatabase:
+    Value: !Ref GlueMlFeatureDatabase
 
 Resources:
   MlResourcesBucket:
