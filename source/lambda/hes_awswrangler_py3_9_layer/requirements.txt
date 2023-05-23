@@ -13,7 +13,7 @@ numpy==1.23.0
 nest_asyncio==1.5.5
 multidict==6.0.2
 yarl==1.7.2
-requests==2.27.1
+requests==2.31.0
 python_dateutil==2.8.2
 lxml==4.9.1
 jmespath==1.0.1
