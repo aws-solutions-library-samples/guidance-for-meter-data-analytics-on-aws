@@ -19,6 +19,9 @@ Parameters:
   IntegratedDataBucket:
     Type: String
     Description: Integrated data bucket name
+  MlResourcesBucket:
+    Type: String
+    Description: ML resource bucket
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -86,6 +89,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MlResourcesBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MlResourcesBucket}/*'
 
 
 
@@ -203,6 +208,7 @@ Metadata:
           - AthenaWorkgroup
           - GrafanaDashboardAuthenticationProvider
           - IntegratedDataBucket
+          - MlResourcesBucket
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -215,6 +221,8 @@ Metadata:
         default: Grafana authentication provider
       IntegratedDataBucket:
         default: Integrated data bucket name
+      MlResourcesBucket:
+        default: ML resource bucket
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:

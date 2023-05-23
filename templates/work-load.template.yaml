@@ -203,6 +203,7 @@ Resources:
         AthenaWorkgroup: !Ref AthenaWorkgroup
         GrafanaDashboardAuthenticationProvider: !Ref GrafanaDashboardAuthenticationProvider
         IntegratedDataBucket: !GetAtt DataStorageStack.Outputs.IntegratedDataBucket
+        MlResourcesBucket: !GetAtt MLPipelineStack.Outputs.MlResourcesBucket
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 

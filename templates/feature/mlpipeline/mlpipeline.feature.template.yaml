@@ -134,6 +134,10 @@ Parameters:
 Conditions:
   UsingDefaultBucket: !Equals [ !Ref QSS3BucketName, 'aws-quickstart' ]
 
+Outputs:
+  MlResourcesBucket:
+    Value: !Ref MlResourcesBucket
+
 Resources:
   MlResourcesBucket:
     Type: AWS::S3::Bucket
