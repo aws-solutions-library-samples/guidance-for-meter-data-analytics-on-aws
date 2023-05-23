@@ -16,6 +16,9 @@ Parameters:
     Description:
       The grafana authentication provider can either be AWS IAM Identity Center (Successor to AWS Single Sign-On) or SAML.
       Both will require additional manual steps. Please consult the documentation BEFORE deploying the MDA solution.
+  IntegratedDataBucket:
+    Type: String
+    Description: Integrated data bucket name
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -81,6 +84,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${GrafanaBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
 
 
 
@@ -197,6 +202,7 @@ Metadata:
         Parameters:
           - AthenaWorkgroup
           - GrafanaDashboardAuthenticationProvider
+          - IntegratedDataBucket
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -207,6 +213,8 @@ Metadata:
         default: Athena Workgroup
       GrafanaDashboardAuthenticationProvider:
         default: Grafana authentication provider
+      IntegratedDataBucket:
+        default: Integrated data bucket name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
