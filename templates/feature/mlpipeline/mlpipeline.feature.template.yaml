@@ -139,6 +139,8 @@ Outputs:
     Value: !Ref MlResourcesBucket
   GlueMlFeatureDatabase:
     Value: !Ref GlueMlFeatureDatabase
+  MlPipelineStackName:
+    Value: !Ref AWS::StackName
 
 Resources:
   MlResourcesBucket:

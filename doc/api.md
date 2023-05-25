@@ -52,18 +52,25 @@ Result:
 ]
 ```
 
-## Forecast API (TODO)
+## Forecast API
 
-Returns the consumption forecast for a given meter for the next day
+Returns the consumption forecast for a given meter for the next three days (hourly)
 
 Request:
 ```bash
-https://<API_ENDPOINT>/forecast/{meter_id}
+https://<API_ENDPOINT>/forecast/{meter_id}?forecast_start=YYYYMMddHHmmss
 ```
 Result:
 ```json
 [
-
+      {
+        "date_time": "2022-07-15 15:00:00",
+        "consumption": 22.9699630737
+      },
+      {
+        "date_time": "2022-07-15 16:00:00",
+        "consumption": 22.5186061859
+      }
 ]
 ```
 
