@@ -52,32 +52,44 @@ Result:
 ]
 ```
 
-## Forecast API (TODO)
+## Forecast API
 
-Returns the consumption forecast for a given meter for the next day
+Returns the consumption forecast for a given meter for the next three days (hourly)
 
 Request:
 ```bash
-https://<API_ENDPOINT>/forecast/{meter_id}
+https://<API_ENDPOINT>/forecast/{meter_id}?forecast_start=YYYYMMddHHmmss
 ```
 Result:
 ```json
 [
-
+      {
+        "date_time": "2022-07-15 15:00:00",
+        "consumption": 22.9699630737
+      },
+      {
+        "date_time": "2022-07-15 16:00:00",
+        "consumption": 22.5186061859
+      }
 ]
 ```
 
-## Anomaly API (TODO)
+## Anomaly API 
 
-Returns the anomalies for a given meter in a given time window
+Returns the anomalies for a given meter and year.
 
 Request:
 ```bash
-https://<API_ENDPOINT>/anomaly/{meter_id}?date_from={yyyyMMdd}&date_to={yyyyMMdd}
+https://<API_ENDPOINT>/anomaly/{meter_id}?year={yyyy}
 ```
 Result:
 ```json
 [
-
+      {
+        "anomaly_date": "2023-01-11",
+        "meter_id": "81cac15d-01d5-3d51-8bde-0f7a383585ae",
+        "consumption": 510.302,
+        "anomaly_importance": 0.22383863
+      }
 ]
 ```

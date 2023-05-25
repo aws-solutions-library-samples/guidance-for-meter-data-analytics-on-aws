@@ -10,6 +10,9 @@ Metadata:
         Parameters:
           - GlueIntegratedDatabase
           - IntegratedDataBucket
+          - MlResourcesBucket
+          - GlueMlFeatureDatabase
+          - MlPipelineStackName
       - Label:
           default: 'AWS Quick Start configuration'
         Parameters:
@@ -20,6 +23,12 @@ Metadata:
         default: Glue integration database name
       IntegratedDataBucket:
         default: Integrated data bucket name
+      MlResourcesBucket:
+        default: ML resource bucket
+      GlueMlFeatureDatabase:
+        default: ML feature database
+      MlPipelineStackName:
+        default: ML pipeline stack name (used for parameter store keys)
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -28,10 +37,19 @@ Metadata:
 Parameters:
   GlueIntegratedDatabase:
     Type: String
-    Description: Glue integration database name
+    Description: Glue integration database name.
   IntegratedDataBucket:
     Type: String
-    Description: Integrated data bucket name
+    Description: Integrated data bucket name.
+  MlResourcesBucket:
+    Type: String
+    Description: ML resource bucket.
+  GlueMlFeatureDatabase:
+    Type: String
+    Description: Ml feature database
+  MlPipelineStackName:
+    Type: String
+    Description: ML pipeline stack name (used for parameter store keys).
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -64,7 +82,7 @@ Conditions:
 
 Globals:
   Function:
-    Runtime: python3.9
+    Runtime: python3.10
     Environment:
       Variables:
         LOG_LEVEL: INFO
@@ -132,6 +150,62 @@ Resources:
             Path: /voltage/{meter_id}
             Method: GET
 
+  GetAnomalyPerMeter:
+    Type: AWS::Serverless::Function
+    Description: Returns the voltage for a given meter.
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_get_anomaly/lambda.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:21"
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+      Environment:
+        Variables:
+          glue_ml_feature_db_name: !Ref GlueMlFeatureDatabase
+          bucket: !Ref ApiBucket
+      Role: !GetAtt LambdaApiRole.Arn
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MdaApiGateway
+            Path: /anomaly/{meter_id}
+            Method: GET
+
+  GetForecastPerMeter:
+    Type: AWS::Serverless::Function
+    Description: Returns the forecast for a given meter.
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri:
+        Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+        Key:
+          Fn::Sub: '${QSS3KeyPrefix}assets/lambda/feature_get_forecast/lambda.zip'
+      Timeout: 120
+      MemorySize: 128
+      Layers:
+        - !Ref PyathenaDependencyLayer
+        - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:17"
+      Environment:
+        Variables:
+          glue_integration_db_name: !Ref GlueIntegratedDatabase
+          bucket: !Ref ApiBucket
+          parameter_store_key_for_endpoint_name: !Sub "/mlpipeline/${MlPipelineStackName}/Forecast/EndpointName"
+      Role: !GetAtt LambdaApiRole.Arn
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MdaApiGateway
+            Path: /forecast/{meter_id}
+            Method: GET
+
   PyathenaDependencyLayer:
     Type: 'AWS::Serverless::LayerVersion'
     Properties:
@@ -181,6 +255,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::${ApiBucket}'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${IntegratedDataBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MlResourcesBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MlResourcesBucket}/*'
                   - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
               - Effect: Allow
                 Action:
@@ -192,4 +268,16 @@ Resources:
                 Resource:
                   - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
                   - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueIntegratedDatabase}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueMlFeatureDatabase}"
                   - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueIntegratedDatabase}/meter_readings_*"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueMlFeatureDatabase}/meter_anomaly_*"
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameter'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mlpipeline/*'
+              - Effect: Allow
+                Action:
+                  - 'sagemaker:InvokeEndpoint'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*'
