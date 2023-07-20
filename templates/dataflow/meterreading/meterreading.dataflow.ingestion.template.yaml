@@ -161,9 +161,6 @@ Resources:
             Principal:
               Service: firehose.amazonaws.com
             Action: 'sts:AssumeRole'
-            Condition:
-              StringEquals:
-                'sts:ExternalId': !Ref 'AWS::AccountId'
   DeliveryPolicy:
     Type: AWS::IAM::Policy
     Properties:
