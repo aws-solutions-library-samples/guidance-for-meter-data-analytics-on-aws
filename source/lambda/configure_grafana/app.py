@@ -58,7 +58,7 @@ def lambda_handler(event, context):
         secrects_manager.update_secret(SecretId=secret_name, SecretString=api_key)
     except:
         secrects_manager.create_secret(Name=secret_name, SecretString=api_key)
-    
+
     header = {
         "Accept": "application/json",
         "Content-Type": "application/json",
