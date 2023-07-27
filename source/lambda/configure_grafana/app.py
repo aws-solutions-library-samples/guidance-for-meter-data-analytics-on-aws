@@ -97,7 +97,7 @@ def prepare_n_deploy_datasource(data_path, datasource_name, client, region, buck
 
     if 'workgroup' in ds['jsonData']:
         ds['jsonData']['workgroup'] = athena_workgroup
-    if 'region' in ds['jsonData']:
+    if 'defaultRegion' in ds['jsonData']:
         ds['jsonData']['defaultRegion'] = region
 
     requests.post(
