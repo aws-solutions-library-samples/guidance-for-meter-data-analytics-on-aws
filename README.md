@@ -24,7 +24,7 @@ Before copying to S3, the sync script packages all AWS Lambda functions (Docker 
 
 2. Use the `sync.sh` script to sync the needed artefacts to S3:
    ```bash
-   cd scripts/bin
+   cd scripts
    ./sync.sh mda-data-<account_id>/artefacts us-east-1
    ```
 
@@ -67,7 +67,7 @@ Adjust the following template and store it besides the `apply-stack.sh` as `stac
 ### 3. Deploy the MDA
 
 ```bash
-cd scripts/bin
+cd scripts
 ./apply-stack.sh stack-parameter.json us-east-1
 ```
 
@@ -75,8 +75,8 @@ cd scripts/bin
 
 The delete script will empty all buckets before removing the stack.
 ```bash
-cd scripts/bin
-./delete-stack.sh
+cd scripts
+./delete-stack.sh us-east-1
 ```
 
 ## CI Checks (Optional)
