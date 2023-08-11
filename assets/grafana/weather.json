@@ -761,7 +761,7 @@
           "hide": 2,
           "label": "CostPerKWh",
           "name": "CostPerKWh",
-          "query": "0.23",
+          "query": ".23",
           "skipUrlSync": false,
           "type": "constant"
         }
