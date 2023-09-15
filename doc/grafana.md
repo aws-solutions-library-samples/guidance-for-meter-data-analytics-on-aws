@@ -17,6 +17,17 @@ The `stack-parameter.json` file require an additional parameter to define the au
     }
 ```
 
+## Enabling AWS IAM Identity Center (SSO)
+If you choose the SSO option, you need to enable the [AWS IAM Identity](https://aws.amazon.com/iam/identity-center/) Center in the account you are deploying the MDA first.
+
+1. Navigate to the [AWS IAM Identity Center console](https://us-east-1.console.aws.amazon.com/singlesignon/home)
+2. If not already done, press the 'Enable' button.
+![AWS IAM Identity Center](img/iam_identity_center_enable.png)
+3. Afterwards a user needs to be created:
+![AWS IAM Identity Center](img/iam_identity_center_add_user.png)
+4. Wait for an email to activate the user:
+![AWS IAM Identity Center](img/iam_identity_center_activate.png)
+
 ## Viewing the Dashboard
 
 In order to view the dashboards after the workspace is created head over to [Amazon Managed Grafana](https://console.aws.amazon.com/grafana). 
