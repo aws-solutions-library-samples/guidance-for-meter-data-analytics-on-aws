@@ -1,7 +1,7 @@
 pytz==2022.1
 ply==3.11
 asn1crypto==1.5.1
-urllib3==1.26.9
+urllib3==1.26.18
 soupsieve==2.3.2.post1
 six==1.16.0
 scramp==1.4.1
