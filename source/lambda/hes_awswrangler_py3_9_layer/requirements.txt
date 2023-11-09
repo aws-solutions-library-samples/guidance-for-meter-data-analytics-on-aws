@@ -42,4 +42,4 @@ redshift_connector==2.0.907
 gremlinpython==3.6.0
 awswrangler==2.16.1
 aiohttp==3.8.5
-pyarrow==7.0.0
+pyarrow==14.0.1
