@@ -7,8 +7,8 @@ rm -fr ../assets/lambda
 cd ../source/lambda/
 
 for d in * ; do
-    if [ "${ONLY}" == "" ] ; then  CUR_RESOURCE_PATH=$d ; else CUR_RESOURCE_PATH=$ONLY; fi
-    if [ "${CUR_RESOURCE_PATH}" == "$d" ] ; then
+    if [ "${ONLY}" = "" ] ; then  CUR_RESOURCE_PATH=$d ; else CUR_RESOURCE_PATH=$ONLY; fi
+    if [ "${CUR_RESOURCE_PATH}" = "$d" ] ; then
       n=$(echo $d| tr '[:upper:]' '[:lower:]')
       cd $d
       if [ -z "$ECR_BUILD_CACHE" ]; then
