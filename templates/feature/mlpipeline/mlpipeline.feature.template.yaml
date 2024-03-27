@@ -34,6 +34,8 @@ Mappings:
       image: "669576153137.dkr.ecr.eu-north-1.amazonaws.com"
     eu-central-1:
       image: "495149712605.dkr.ecr.eu-central-1.amazonaws.com"
+    eu-south-2:
+      image: "503227376785.dkr.ecr.eu-south-2.amazonaws.com"
     eu-west-1:
       image: "224300973850.dkr.ecr.eu-west-1.amazonaws.com"
     eu-west-2:
