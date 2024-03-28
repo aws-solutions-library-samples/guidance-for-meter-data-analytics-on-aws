@@ -105,6 +105,7 @@ Resources:
       AuthenticationProviders:
         - !Ref GrafanaDashboardAuthenticationProvider
       PermissionType: CUSTOMER_MANAGED
+      PluginAdminEnabled: true
       RoleArn: !GetAtt
         - AmazonGrafanaWorkspaceIAMRole
         - Arn

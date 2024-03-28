@@ -9,7 +9,7 @@ STACK_NAME=meter-data-analytics
 for bucket in $BUCKETS
 do
 
-  if  [[ $bucket == meter-data-* ]] ;
+  if  [[ $bucket = meter-data-* ]] ;
   then
       echo "Deleting bucket: $bucket"
       {
