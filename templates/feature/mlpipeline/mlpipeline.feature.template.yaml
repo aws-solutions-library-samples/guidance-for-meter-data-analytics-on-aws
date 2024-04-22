@@ -297,7 +297,6 @@ Resources:
         --enable-metrics: "true"
         --enable-continuous-cloudwatch-log: "true"
         --enable-continuous-log-filter: "true"
-        --job-bookmark-option: "job-bookmark-enable"
         --job-language: "python"
         --enable-auto-scaling: "true"
         --SOURCE_S3_BUCKET: !Ref IntegratedDataBucket #"meter-data-analytics-datasto-integrateddatabucket-171t1y75fisgl" # TODO
